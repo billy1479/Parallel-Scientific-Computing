@@ -7,7 +7,7 @@
 
 class NBodySimulation {
 
- private:
+ protected:
   double t;
   double tFinal;
   double tPlot;

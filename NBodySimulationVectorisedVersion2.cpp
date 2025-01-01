@@ -58,7 +58,7 @@ class NBodySimulationVectorised : public NBodySimulation {
         delete[] force2;
     }
 
-    double NBodySimulation::force_calculation(int i, int j, int direction) {
+    double force_calculation(int i, int j, int direction) {
         #pragma omp simd
         const double distance = sqrt(
             (x[j][0] - x[i][0]) * (x[j][0] - x[i][0]) +
