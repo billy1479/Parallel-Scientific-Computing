@@ -67,6 +67,8 @@ class NBodySimulationVectorised : public NBodySimulation {
         );
 
         const double distance3 = distance * distance * distance;
+
+        #pragma omp simd reduction(min:minDx)
         minDx = std::min(minDx, distance);
 
         return (x[i][direction] - x[j][direction]) * mass[i] * mass[j] / distance3;
