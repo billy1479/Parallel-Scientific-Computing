@@ -1,5 +1,4 @@
 #include <iomanip>
-#include <chrono>
 #include "NBodySimulationVectorised.cpp"
 
 /**
@@ -31,16 +30,10 @@ int main (int argc, char** argv) {
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();
   }
-
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end-start;
-  std::cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
