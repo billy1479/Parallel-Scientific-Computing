@@ -1,6 +1,8 @@
 {
     "files.associations": {
+        "MLTable": "yaml",
         "algorithm": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "iterator": "cpp"
     }
 }
