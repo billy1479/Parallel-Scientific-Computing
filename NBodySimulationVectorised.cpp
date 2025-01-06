@@ -1,7 +1,5 @@
 #include "NBodySimulation.h"
 
-// Need to test this
-
 class NBodySimulationVectorised : public NBodySimulation {
     public:
         void updateBody() {
@@ -9,9 +7,6 @@ class NBodySimulationVectorised : public NBodySimulation {
             maxV = 0.0;
             minDx = std::numeric_limits<double>::max();
 
-            // force0 = force along x direction
-            // force1 = force along y direction
-            // force2 = force along z direction
             double* force0 = new double[NumberOfBodies]();
             double* force1 = new double[NumberOfBodies]();
             double* force2 = new double[NumberOfBodies]();
@@ -43,8 +38,10 @@ class NBodySimulationVectorised : public NBodySimulation {
             }
 
             // Velocity updates in a vectorised loop with reduction for maxV
-            #pragma omp simd reduction(max:maxV)
+            // reduction(max:maxV)
+            #pragma omp simd 
             for (int i = 0; i < NumberOfBodies; i++) {
+                
                 v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
                 v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
                 v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
