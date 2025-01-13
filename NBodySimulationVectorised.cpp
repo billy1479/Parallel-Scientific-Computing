@@ -1,52 +1,54 @@
 #include "NBodySimulation.h"
+#include <iostream>
+#include <limits>
+#include <cmath>
+#include <algorithm>
+#include <cstdlib>
 
 class NBodySimulationVectorised : public NBodySimulation {
     public:
-        void updateBody() {
+        void updateBody () {
             timeStepCounter++;
-            maxV = 0.0;
-            minDx = std::numeric_limits<double>::max();
+            maxV   = 0.0;
+            minDx  = std::numeric_limits<double>::max();
 
             double* force0 = new double[NumberOfBodies]();
             double* force1 = new double[NumberOfBodies]();
             double* force2 = new double[NumberOfBodies]();
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
-        
-            #pragma omp simd reduction(min:minDx)
-            for (int i = 0; i < NumberOfBodies; i++) {
-                for (int j = i + 1; j < NumberOfBodies; j++) {
-                    if (i != j) {
+
+            for (int i=0; i<NumberOfBodies; i++) { // HAVE OPTIMISED BY USING VARIABLES TO STORE THE FORCE CALCULATION
+                for (int j=i+1; j<NumberOfBodies; j++) {
+                    if(i!=j){
+                        double f_0 = force_calculation(i,j,0);
+                        double f_1 = force_calculation(i,j,1);
+                        double f_2 = force_calculation(i,j,2);
                         // x,y,z forces acting on particle i.
-                        force0[i] += force_calculation(i, j, 0);
-                        force1[i] += force_calculation(i, j, 1);
-                        force2[i] += force_calculation(i, j, 2);
+                        force0[i] += f_0;
+                        force1[i] += f_1;
+                        force2[i] += f_2;
                         // x,y,z symmetric forces acting on particle j.
-                        force0[j] -= force_calculation(i, j, 0);
-                        force1[j] -= force_calculation(i, j, 1);
-                        force2[j] -= force_calculation(i, j, 2);
+                        force0[j] -= f_0;
+                        force1[j] -= f_1;
+                        force2[j] -= f_2;
+
                     }
                 }
             }
 
-            // Position updates in a vectorised loop
-            #pragma omp simd
-            for (int i = 0; i < NumberOfBodies; i++) {
-                x[i][0] = x[i][0] + timeStepSize * v[i][0];
-                x[i][1] = x[i][1] + timeStepSize * v[i][1];
-                x[i][2] = x[i][2] + timeStepSize * v[i][2];
+            for (int i=0; i < NumberOfBodies; i++){
+                x[i][0] += timeStepSize * v[i][0];
+                x[i][1] += timeStepSize * v[i][1];
+                x[i][2] += timeStepSize * v[i][2];
             }
 
-            // Velocity updates in a vectorised loop with reduction for maxV
-            // reduction(max:maxV)
-            #pragma omp simd 
-            for (int i = 0; i < NumberOfBodies; i++) {
-                
-                v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
-                v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
-                v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
+            for (int i=0; i < NumberOfBodies; i++){
+                v[i][0] += v[i][0] + timeStepSize * force0[i] / mass[i];
+                v[i][1] += v[i][1] + timeStepSize * force1[i] / mass[i];
+                v[i][2] += v[i][2] + timeStepSize * force2[i] / mass[i];
 
-                maxV = std::max(maxV, std::sqrt(v[i][0] * v[i][0] + v[i][1] * v[i][1] + v[i][2] * v[i][2]));
+                maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
             }
 
             t += timeStepSize;
@@ -57,16 +59,15 @@ class NBodySimulationVectorised : public NBodySimulation {
         }
 
         #pragma omp declare simd
-        double force_calculation(int i, int j, int direction) {
-            const double distance = sqrt(
-                (x[j][0] - x[i][0]) * (x[j][0] - x[i][0]) +
-                (x[j][1] - x[i][1]) * (x[j][1] - x[i][1]) +
-                (x[j][2] - x[i][2]) * (x[j][2] - x[i][2])
-            );
+        double force_calculation (int i, int j, int direction){// HAVE OPTIMISED BY USING VARIABLES TO STORE THE FORCE CALCULATION                            
+            double temp_1  = x[j][0]-x[i][0];
+            double temp_2  = x[j][1]-x[i][1];
+            double temp_3  = x[j][2]-x[i][2];
 
-            const double distance3 = distance * distance * distance;
-            minDx = std::min(minDx, distance);
+            double distance = sqrt( temp_1 * temp_1 + temp_2 * temp_2 + temp_3 * temp_3 );
 
-            return (x[i][direction] - x[j][direction]) * mass[i] * mass[j] / distance3;
+            minDx = std::min( minDx,distance);
+
+            return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / (distance * distance * distance);
         }
 };

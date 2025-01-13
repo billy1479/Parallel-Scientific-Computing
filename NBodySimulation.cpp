@@ -107,7 +107,6 @@ void NBodySimulation::setUp (int argc, char** argv) {
   }
 }
 
-
 double NBodySimulation::force_calculation (int i, int j, int direction){
   // Euclidean distance
   const double distance = sqrt(
@@ -115,6 +114,7 @@ double NBodySimulation::force_calculation (int i, int j, int direction){
                                (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
                                (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
                                );
+                               
   const double distance3 = distance * distance * distance;
   minDx = std::min( minDx,distance );
 

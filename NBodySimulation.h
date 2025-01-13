@@ -25,6 +25,7 @@ class NBodySimulation {
    * Equivalent to x storing the velocities.
    */
   double** v;
+  
 
   /**
    * One mass entry per molecule/particle.
