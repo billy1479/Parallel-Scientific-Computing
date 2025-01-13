@@ -5,7 +5,8 @@
         "cmath": "cpp",
         "iterator": "cpp",
         "iostream": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "atomic": "cpp"
     },
     "C_Cpp.default.compilerPath": "/bin/gcc"
 }
