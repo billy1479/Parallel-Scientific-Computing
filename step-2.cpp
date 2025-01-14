@@ -21,25 +21,76 @@
 
 class NBodySimulationParallelised : public NBodySimulationVectorised {
     public:
-    #pragma omp declare simd // SIMD enabled version of the square root function
-        double simd_sqrt(float x) {
-            return sqrt(x);
+        NBodySimulationParallelised() :
+            t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
+            timeStepCounter(0), timeStepSize(0),
+            x_pos(nullptr), y_pos(nullptr), z_pos(nullptr),
+            x_vel(nullptr), y_vel(nullptr), z_vel(nullptr),
+            mass(nullptr), maxV(0), minDx(0),
+            snapshotCounter(0) {
+            // Set number of threads at construction
+            num_threads = omp_get_max_threads();
+            omp_set_num_threads(num_threads);
         }
 
-        inline double simd_max(double a, double b) { // Open mp max function
-            __m128d va = _mm_set_sd(a);
-            __m128d vb = _mm_set_sd(b);
-            __m128d vmax = _mm_max_sd(va, vb);
-            return _mm_cvtsd_f64(vmax);
+        ~NBodySimulationParallelised() {
+            delete[] x_pos;
+            delete[] y_pos;
+            delete[] z_pos;
+            delete[] x_vel;
+            delete[] y_vel;
+            delete[] z_vel;
+            delete[] mass;
         }
 
-        inline double simd_min(double a, double b) { // Open mp min function
-            __m128d va = _mm_set_sd(a);
-            __m128d vb = _mm_set_sd(b);
-            __m128d vmin = _mm_min_sd(va, vb);
-            return _mm_cvtsd_f64(vmin);
-        }
+        void setUp(int argc, char** argv) {
+            checkInput(argc, argv);
 
+            NumberOfBodies = (argc-4) / 7;
+
+            // Allocate 1D arrays
+            x_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            y_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            z_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            x_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            y_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            z_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+            mass = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+
+            int readArgument = 1;
+
+            tPlotDelta   = std::stof(argv[readArgument]); readArgument++;
+            tFinal       = std::stof(argv[readArgument]); readArgument++;
+            timeStepSize = std::stof(argv[readArgument]); readArgument++;
+
+            for (int i=0; i<NumberOfBodies; i++) {
+                x_pos[i] = std::stof(argv[readArgument + i*7]);
+                y_pos[i] = std::stof(argv[readArgument + i*7 + 1]);
+                z_pos[i] = std::stof(argv[readArgument + i*7 + 2]);
+                x_vel[i] = std::stof(argv[readArgument + i*7 + 3]);
+                y_vel[i] = std::stof(argv[readArgument + i*7 + 4]);
+                z_vel[i] = std::stof(argv[readArgument + i*7 + 5]);
+                mass[i] = std::stof(argv[readArgument + i*7 + 6]);
+
+                if (mass[i]<=0.0) {
+                std::cerr << "invalid mass for body " << i << std::endl;
+                exit(-2);
+                }
+            }
+
+             std::cout << "created setup with " << NumberOfBodies << " bodies"
+            << std::endl;
+
+            if (tPlotDelta<=0.0) {
+                std::cout << "plotting switched off" << std::endl;
+                tPlot = tFinal + 1.0;
+            }
+            else {
+                std::cout << "plot initial setup plus every " << tPlotDelta
+                        << " time units" << std::endl;
+                tPlot = 0.0;
+            }
+        }
         void updateBody () {
 
           timeStepCounter++;
@@ -49,16 +100,16 @@ class NBodySimulationParallelised : public NBodySimulationVectorised {
           // force0 = force along x direction
           // force1 = force along y direction
           // force2 = force along z direction
-          double* force0 = new double[NumberOfBodies]();
-          double* force1 = new double[NumberOfBodies]();
-          double* force2 = new double[NumberOfBodies]();
+          double* force0 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+          double* force1 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
+          double* force2 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
 
           if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
           // Set number of threads
           omp_set_num_threads(5);
 
-          #pragma omp parallel for schedule(dynamic) reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies])
+          // #pragma omp parallel for schedule(dynamic) reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies])
           for (int i = 0; i < NumberOfBodies; i++) {
             for (int j = i + 1; j < NumberOfBodies; j++) {
               if (i != j) {
@@ -83,43 +134,72 @@ class NBodySimulationParallelised : public NBodySimulationVectorised {
             }
           }
 
-          #pragma omp parallel for
-          for (int i = 0; i < NumberOfBodies; i++) {
-            x[i][0] += timeStepSize * v[i][0];
-            x[i][1] += timeStepSize * v[i][1];
-            x[i][2] += timeStepSize * v[i][2];
-          }
+          for (int i=0; i < NumberOfBodies; i++){
+                x_pos[i] += timeStepSize * x_vel[i];
+                y_pos[i] += timeStepSize * y_vel[i];
+                z_pos[i] += timeStepSize * z_vel[i];
+            }
 
-          #pragma omp parallel for reduction(max: maxV)
-          for (int i = 0; i < NumberOfBodies; i++) {
-            v[i][0] += timeStepSize * force0[i] / mass[i];
-            v[i][1] += timeStepSize * force1[i] / mass[i];
-            v[i][2] += timeStepSize * force2[i] / mass[i];
-            double speed = std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] );
-            maxV = std::max(maxV, speed);
-          }
+
+           for (int i=0; i < NumberOfBodies; i++) {
+                x_vel[i] += timeStepSize * force0[i] / mass[i];
+                y_vel[i] += timeStepSize * force1[i] / mass[i];
+                z_vel[i] += timeStepSize * force2[i] / mass[i];
+
+                maxV = std::max(maxV, std::sqrt(x_vel[i]*x_vel[i] + y_vel[i]*y_vel[i] + z_vel[i]*z_vel[i]));
+            }
 
           t += timeStepSize;
 
-          delete[] force0;
-          delete[] force1;
-          delete[] force2;
+          _mm_free(force0);
+          _mm_free(force1);
+          _mm_free(force2);
         }
-        double force_calculation(int i, int j, int direction) {
-                    const double distance = sqrt(
-                        (x[j][0] - x[i][0]) * (x[j][0] - x[i][0]) +
-                        (x[j][1] - x[i][1]) * (x[j][1] - x[i][1]) +
-                        (x[j][2] - x[i][2]) * (x[j][2] - x[i][2])
-                    );
+        double force_calculation (int i, int j, int direction){
+            const double dx = x_pos[i] - x_pos[j];
+            const double dy = y_pos[i] - y_pos[j];
+            const double dz = z_pos[i] - z_pos[j];
+            
+            const double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-                    const double distance3 = distance * distance * distance;
+            minDx = std::min(minDx,distance);
 
-                    #pragma omp critical
-                    minDx = std::min(minDx, distance);
+            double coord_diff;
+            switch(direction) {
+                case 0: coord_diff = dx; break;
+                case 1: coord_diff = dy; break;
+                case 2: coord_diff = dz; break;
+                default: coord_diff = 0;
+            }
 
-                    return (x[i][direction] - x[j][direction]) * mass[i] * mass[j] / distance3;
-                }
-        };
+            return coord_diff * mass[i] * mass[j] / (distance * distance * distance);
+        }
+
+    private:
+      double* x_pos;
+      double* y_pos;
+      double* z_pos;
+      double* x_vel;
+      double* y_vel;
+      double* z_vel;
+      double* mass;
+
+      double t;
+      double tFinal;
+      double tPlot;
+      double tPlotDelta;
+      int NumberOfBodies;
+      int timeStepCounter;
+      double timeStepSize;
+      int num_threads;
+
+      double maxV;
+      double minDx;
+      
+      std::ofstream videoFile;
+      int snapshotCounter;
+};
+
 
 /**
  * Main routine.

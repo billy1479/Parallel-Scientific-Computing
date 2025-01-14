@@ -178,7 +178,6 @@ class NBodySimulationVectorised : public NBodySimulation {
 
         void takeSnapshot() {
             if (t >= tPlot) {
-                std::cout << "New version used" << std::endl;
                 printParaviewSnapshot();
                 printSnapshotSummary();
                 tPlot += tPlotDelta;
