@@ -118,6 +118,8 @@ double NBodySimulation::force_calculation (int i, int j, int direction){
   const double distance3 = distance * distance * distance;
   minDx = std::min( minDx,distance );
 
+  double temp = (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
+
   return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
 }
 

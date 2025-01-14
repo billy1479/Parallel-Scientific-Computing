@@ -9,6 +9,76 @@
 
 class NBodySimulationVectorised : public NBodySimulation {
     public:
+        NBodySimulationVectorised() :
+            t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
+            timeStepCounter(0), timeStepSize(0),
+            x_pos(nullptr), y_pos(nullptr), z_pos(nullptr),
+            x_vel(nullptr), y_vel(nullptr), z_vel(nullptr),
+            mass(nullptr), maxV(0), minDx(0),
+            snapshotCounter(0) {}
+
+        ~NBodySimulationVectorised() {
+            delete[] x_pos;
+            delete[] y_pos;
+            delete[] z_pos;
+            delete[] x_vel;
+            delete[] y_vel;
+            delete[] z_vel;
+            delete[] mass;
+        }
+
+        void setUp(int argc, char** argv) {
+            checkInput(argc, argv);
+
+            NumberOfBodies = (argc-4) / 7;
+
+            // Allocate 1D arrays
+            x_pos = new double[NumberOfBodies];
+            y_pos = new double[NumberOfBodies];
+            z_pos = new double[NumberOfBodies];
+            x_vel = new double[NumberOfBodies];
+            y_vel = new double[NumberOfBodies];
+            z_vel = new double[NumberOfBodies];
+            mass = new double[NumberOfBodies];
+
+            int readArgument = 1;
+
+            tPlotDelta   = std::stof(argv[readArgument]); readArgument++;
+            tFinal       = std::stof(argv[readArgument]); readArgument++;
+            timeStepSize = std::stof(argv[readArgument]); readArgument++;
+
+            for (int i=0; i<NumberOfBodies; i++) {
+                x_pos[i] = std::stof(argv[readArgument]); readArgument++;
+                y_pos[i] = std::stof(argv[readArgument]); readArgument++;
+                z_pos[i] = std::stof(argv[readArgument]); readArgument++;
+
+                x_vel[i] = std::stof(argv[readArgument]); readArgument++;
+                y_vel[i] = std::stof(argv[readArgument]); readArgument++;
+                z_vel[i] = std::stof(argv[readArgument]); readArgument++;
+
+                mass[i] = std::stof(argv[readArgument]); readArgument++;
+
+                if (mass[i]<=0.0) {
+                std::cerr << "invalid mass for body " << i << std::endl;
+                exit(-2);
+                }
+            }
+
+             std::cout << "created setup with " << NumberOfBodies << " bodies"
+            << std::endl;
+
+            if (tPlotDelta<=0.0) {
+                std::cout << "plotting switched off" << std::endl;
+                tPlot = tFinal + 1.0;
+            }
+            else {
+                std::cout << "plot initial setup plus every " << tPlotDelta
+                        << " time units" << std::endl;
+                tPlot = 0.0;
+            }
+        }
+
+
         #pragma omp declare simd // SIMD enabled version of the square root function
         double simd_sqrt(float x) {
             return sqrt(x);
@@ -60,18 +130,18 @@ class NBodySimulationVectorised : public NBodySimulation {
             }
 
             for (int i=0; i < NumberOfBodies; i++){
-                x[i][0] += timeStepSize * v[i][0];
-                x[i][1] += timeStepSize * v[i][1];
-                x[i][2] += timeStepSize * v[i][2];
+                x_pos[i] += timeStepSize * x_vel[i];
+                y_pos[i] += timeStepSize * y_vel[i];
+                z_pos[i] += timeStepSize * z_vel[i];
             }
 
-            #pragma omp simd
-            for (int i=0; i < NumberOfBodies; i++){
-                v[i][0] += v[i][0] + timeStepSize * force0[i] / mass[i];
-                v[i][1] += v[i][1] + timeStepSize * force1[i] / mass[i];
-                v[i][2] += v[i][2] + timeStepSize * force2[i] / mass[i];
 
-                maxV = simd_max(maxV, simd_sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
+           for (int i=0; i < NumberOfBodies; i++) {
+                x_vel[i] += timeStepSize * force0[i] / mass[i];
+                y_vel[i] += timeStepSize * force1[i] / mass[i];
+                z_vel[i] += timeStepSize * force2[i] / mass[i];
+
+                maxV = std::max(maxV, std::sqrt(x_vel[i]*x_vel[i] + y_vel[i]*y_vel[i] + z_vel[i]*z_vel[i]));
             }
 
             t += timeStepSize;
@@ -83,14 +153,119 @@ class NBodySimulationVectorised : public NBodySimulation {
 
         #pragma omp declare simd
         double force_calculation (int i, int j, int direction){
-            const double distance = sqrt(
-                               (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
-                               (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
-                               (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
-                               );
+            const double dx = x_pos[i] - x_pos[j];
+            const double dy = y_pos[i] - y_pos[j];
+            const double dz = z_pos[i] - z_pos[j];
+            
+            const double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-            minDx = simd_min( minDx,distance);
+            minDx = std::min(minDx,distance);
 
-            return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / (distance * distance * distance);
+            double coord_diff;
+            switch(direction) {
+                case 0: coord_diff = dx; break;
+                case 1: coord_diff = dy; break;
+                case 2: coord_diff = dz; break;
+                default: coord_diff = 0;
+            }
+
+            return coord_diff * mass[i] * mass[j] / (distance * distance * distance);
         }
+
+        bool hasReachedEnd() {
+            return t > tFinal;
+        }
+
+        void takeSnapshot() {
+            if (t >= tPlot) {
+                std::cout << "New version used" << std::endl;
+                printParaviewSnapshot();
+                printSnapshotSummary();
+                tPlot += tPlotDelta;
+            }
+        }
+        
+        void closeParaviewVideoFile() {
+            videoFile << "</Collection>"
+                    << "</VTKFile>" << std::endl;
+            videoFile.close();
+        }
+
+        void printParaviewSnapshot() {
+            static int counter = -1;
+            counter++;
+            std::stringstream filename, filename_nofolder;
+            filename << "paraview-output/result-" << counter << ".vtp";
+            filename_nofolder << "result-" << counter << ".vtp";
+            std::ofstream out(filename.str().c_str());
+            
+            out << "<VTKFile type=\"PolyData\" >" << std::endl
+                << "<PolyData>" << std::endl
+                << " <Piece NumberOfPoints=\"" << NumberOfBodies << "\">" << std::endl
+                << "  <Points>" << std::endl
+                << "   <DataArray type=\"Float64\""
+                << " NumberOfComponents=\"3\""
+                << " format=\"ascii\">";
+
+            // Write positions using separate coordinate arrays
+            for (int i = 0; i < NumberOfBodies; i++) {
+                out << x_pos[i] << " "
+                    << y_pos[i] << " "
+                    << z_pos[i] << " ";
+            }
+
+            out << "   </DataArray>" << std::endl
+                << "  </Points>" << std::endl
+                << " </Piece>" << std::endl
+                << "</PolyData>" << std::endl
+                << "</VTKFile>" << std::endl;
+
+            out.close();
+
+            videoFile << "<DataSet timestep=\"" << counter
+                    << "\" group=\"\" part=\"0\" file=\"" << filename_nofolder.str()
+                    << "\"/>" << std::endl;
+        }
+
+        void printSnapshotSummary() {
+            std::cout << "plot next snapshot"
+                    << ",\t time step=" << timeStepCounter
+                    << ",\t t=" << t
+                    << ",\t dt=" << timeStepSize
+                    << ",\t v_max=" << maxV
+                    << ",\t dx_min=" << minDx
+                    << std::endl;
+        }
+
+        void printSummary() {
+            std::cout << "Number of remaining objects: " << NumberOfBodies << std::endl;
+            std::cout << "Position of first remaining object: "
+                    << x_pos[0] << ", " << y_pos[0] << ", " << z_pos[0] << std::endl;
+        }
+
+    private:
+        double* x_pos;
+        double* y_pos;
+        double* z_pos;
+        double* x_vel;
+        double* y_vel;
+        double* z_vel;
+
+        double* mass;
+
+        double t;
+        double tFinal;
+        double tPlot;
+        double tPlotDelta;
+        int NumberOfBodies;
+        int timeStepCounter;
+        double timeStepSize;
+
+        // Statistics and monitoring
+        double maxV;
+        double minDx;
+        
+        // Output handling
+        std::ofstream videoFile;
+        int snapshotCounter;
 };
