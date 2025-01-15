@@ -19,187 +19,62 @@
  * "Point Gaussian". Pressing play will play your time steps.
  */
 
-class NBodySimulationParallelised : public NBodySimulationVectorised {
+class NBodySimulationParallelised : public NBodySimulation {
     public:
-        NBodySimulationParallelised() :
-            t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
-            timeStepCounter(0), timeStepSize(0),
-            x_pos(nullptr), y_pos(nullptr), z_pos(nullptr),
-            x_vel(nullptr), y_vel(nullptr), z_vel(nullptr),
-            mass(nullptr), maxV(0), minDx(0),
-            snapshotCounter(0) {
-            // Set number of threads at construction
-            num_threads = omp_get_max_threads();
-            omp_set_num_threads(num_threads);
-        }
+        void updateBody () {
+            std::cout << "Running parallelised version" << std::endl;
 
-        ~NBodySimulationParallelised() {
-            delete[] x_pos;
-            delete[] y_pos;
-            delete[] z_pos;
-            delete[] x_vel;
-            delete[] y_vel;
-            delete[] z_vel;
-            delete[] mass;
-        }
+            timeStepCounter++;
+            maxV   = 0.0;
+            minDx  = std::numeric_limits<double>::max();
 
-        void setUp(int argc, char** argv) {
-            checkInput(argc, argv);
+            // force0 = force along x direction
+            // force1 = force along y direction
+            // force2 = force along z direction
+            double* force0 = new double[NumberOfBodies]();
+            double* force1 = new double[NumberOfBodies]();
+            double* force2 = new double[NumberOfBodies]();
 
-            NumberOfBodies = (argc-4) / 7;
+            if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
-            // Allocate 1D arrays
-            x_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            y_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            z_pos = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            x_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            y_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            z_vel = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-            mass = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-
-            int readArgument = 1;
-
-            tPlotDelta   = std::stof(argv[readArgument]); readArgument++;
-            tFinal       = std::stof(argv[readArgument]); readArgument++;
-            timeStepSize = std::stof(argv[readArgument]); readArgument++;
-
+            #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
             for (int i=0; i<NumberOfBodies; i++) {
-                x_pos[i] = std::stof(argv[readArgument + i*7]);
-                y_pos[i] = std::stof(argv[readArgument + i*7 + 1]);
-                z_pos[i] = std::stof(argv[readArgument + i*7 + 2]);
-                x_vel[i] = std::stof(argv[readArgument + i*7 + 3]);
-                y_vel[i] = std::stof(argv[readArgument + i*7 + 4]);
-                z_vel[i] = std::stof(argv[readArgument + i*7 + 5]);
-                mass[i] = std::stof(argv[readArgument + i*7 + 6]);
-
-                if (mass[i]<=0.0) {
-                std::cerr << "invalid mass for body " << i << std::endl;
-                exit(-2);
+                for (int j=i+1; j<NumberOfBodies; j++) {
+                    if(i!=j){
+                        double f0 = force_calculation(i,j,0);
+                        double f1 = force_calculation(i,j,1);
+                        double f2 = force_calculation(i,j,2);
+                        
+                        force0[i] += f0;
+                        force1[i] += f1;
+                        force2[i] += f2;
+                        force0[j] -= f0;
+                        force1[j] -= f1;
+                        force2[j] -= f2;
+                    }
                 }
             }
 
-             std::cout << "created setup with " << NumberOfBodies << " bodies"
-            << std::endl;
-
-            if (tPlotDelta<=0.0) {
-                std::cout << "plotting switched off" << std::endl;
-                tPlot = tFinal + 1.0;
+            for (int i=0; i < NumberOfBodies; i++){
+                x[i][0] = x[i][0] + timeStepSize * v[i][0];
+                x[i][1] = x[i][1] + timeStepSize * v[i][1];
+                x[i][2] = x[i][2] + timeStepSize * v[i][2];
             }
-            else {
-                std::cout << "plot initial setup plus every " << tPlotDelta
-                        << " time units" << std::endl;
-                tPlot = 0.0;
+            for (int i=0; i < NumberOfBodies; i++){
+                v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
+                v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
+                v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
+
+                maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
             }
-        }
-        void updateBody () {
+            t += timeStepSize;
 
-          timeStepCounter++;
-          maxV   = 0.0;
-          minDx  = std::numeric_limits<double>::max();
-
-          // force0 = force along x direction
-          // force1 = force along y direction
-          // force2 = force along z direction
-          double* force0 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-          double* force1 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-          double* force2 = static_cast<double*>(_mm_malloc(NumberOfBodies * sizeof(double), 32));
-
-          if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
-
-          // Set number of threads
-          omp_set_num_threads(5);
-
-          // #pragma omp parallel for schedule(dynamic) reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies])
-          for (int i = 0; i < NumberOfBodies; i++) {
-            for (int j = i + 1; j < NumberOfBodies; j++) {
-              if (i != j) {
-                double fx = force_calculation(i, j, 0);
-                double fy = force_calculation(i, j, 1);
-                double fz = force_calculation(i, j, 2);
-
-                // #pragma omp atomic
-                force0[i] += fx;
-                // #pragma omp atomic
-                force1[i] += fy;
-                // #pragma omp atomic
-                force2[i] += fz;
-
-                // #pragma omp atomic
-                force0[j] -= fx;
-                // #pragma omp atomic
-                force1[j] -= fy;
-                // #pragma omp atomic
-                force2[j] -= fz;
-              }
-            }
-          }
-
-          for (int i=0; i < NumberOfBodies; i++){
-                x_pos[i] += timeStepSize * x_vel[i];
-                y_pos[i] += timeStepSize * y_vel[i];
-                z_pos[i] += timeStepSize * z_vel[i];
-            }
-
-
-           for (int i=0; i < NumberOfBodies; i++) {
-                x_vel[i] += timeStepSize * force0[i] / mass[i];
-                y_vel[i] += timeStepSize * force1[i] / mass[i];
-                z_vel[i] += timeStepSize * force2[i] / mass[i];
-
-                maxV = std::max(maxV, std::sqrt(x_vel[i]*x_vel[i] + y_vel[i]*y_vel[i] + z_vel[i]*z_vel[i]));
-            }
-
-          t += timeStepSize;
-
-          _mm_free(force0);
-          _mm_free(force1);
-          _mm_free(force2);
-        }
-        double force_calculation (int i, int j, int direction){
-            const double dx = x_pos[i] - x_pos[j];
-            const double dy = y_pos[i] - y_pos[j];
-            const double dz = z_pos[i] - z_pos[j];
-            
-            const double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
-
-            minDx = std::min(minDx,distance);
-
-            double coord_diff;
-            switch(direction) {
-                case 0: coord_diff = dx; break;
-                case 1: coord_diff = dy; break;
-                case 2: coord_diff = dz; break;
-                default: coord_diff = 0;
-            }
-
-            return coord_diff * mass[i] * mass[j] / (distance * distance * distance);
+            delete[] force0;
+            delete[] force1;
+            delete[] force2;
         }
 
-    private:
-      double* x_pos;
-      double* y_pos;
-      double* z_pos;
-      double* x_vel;
-      double* y_vel;
-      double* z_vel;
-      double* mass;
-
-      double t;
-      double tFinal;
-      double tPlot;
-      double tPlotDelta;
-      int NumberOfBodies;
-      int timeStepCounter;
-      double timeStepSize;
-      int num_threads;
-
-      double maxV;
-      double minDx;
-      
-      std::ofstream videoFile;
-      int snapshotCounter;
 };
-
 
 /**
  * Main routine.
