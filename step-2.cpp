@@ -30,9 +30,19 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             NumberOfBodies = (argc-4) / 7;
 
-            x    = new double*[NumberOfBodies];
-            v    = new double*[NumberOfBodies];
-            mass = new double [NumberOfBodies];
+            // x    = new double*[NumberOfBodies];
+            // v    = new double*[NumberOfBodies];
+            // mass = new double [NumberOfBodies];
+
+            x0 = new double[NumberOfBodies];  // x direction positions
+            x1 = new double[NumberOfBodies];  // y direction positions
+            x2 = new double[NumberOfBodies];  // z direction positions
+            
+            v0 = new double[NumberOfBodies];  // x direction velocities
+            v1 = new double[NumberOfBodies];  // y direction velocities
+            v2 = new double[NumberOfBodies];  // z direction velocities
+            
+            mass = new double[NumberOfBodies];
 
             int readArgument = 1;
 
@@ -41,18 +51,33 @@ class NBodySimulationParallelised : public NBodySimulation {
             timeStepSize = std::stof(argv[readArgument]); readArgument++;
 
             for (int i=0; i<NumberOfBodies; i++) {
-                x[i] = new double[3];
-                v[i] = new double[3];
+                // x[i] = new double[3];
+                // v[i] = new double[3];
 
-                x[i][0] = std::stof(argv[readArgument]); readArgument++;
-                x[i][1] = std::stof(argv[readArgument]); readArgument++;
-                x[i][2] = std::stof(argv[readArgument]); readArgument++;
+                // x[i][0] = std::stof(argv[readArgument]); readArgument++;
+                // x[i][1] = std::stof(argv[readArgument]); readArgument++;
+                // x[i][2] = std::stof(argv[readArgument]); readArgument++;
 
-                v[i][0] = std::stof(argv[readArgument]); readArgument++;
-                v[i][1] = std::stof(argv[readArgument]); readArgument++;
-                v[i][2] = std::stof(argv[readArgument]); readArgument++;
+                // v[i][0] = std::stof(argv[readArgument]); readArgument++;
+                // v[i][1] = std::stof(argv[readArgument]); readArgument++;
+                // v[i][2] = std::stof(argv[readArgument]); readArgument++;
+
+                // mass[i] = std::stof(argv[readArgument]); readArgument++;
+
+                // Modified array declarations
+
+                // Reading positions
+                x0[i] = std::stof(argv[readArgument]); readArgument++;
+                x1[i] = std::stof(argv[readArgument]); readArgument++;
+                x2[i] = std::stof(argv[readArgument]); readArgument++;
+
+                // Reading velocities
+                v0[i] = std::stof(argv[readArgument]); readArgument++;
+                v1[i] = std::stof(argv[readArgument]); readArgument++;
+                v2[i] = std::stof(argv[readArgument]); readArgument++;
 
                 mass[i] = std::stof(argv[readArgument]); readArgument++;
+                
 
                 if (mass[i]<=0.0 ) {
                 std::cerr << "invalid mass for body " << i << std::endl;
@@ -89,7 +114,7 @@ class NBodySimulationParallelised : public NBodySimulation {
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
             int i = 0;
-            #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
+            #pragma omp parallel for collapse(2) schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
             for (i = 0; i<NumberOfBodies; i++) {
                 #pragma omp parallel for
                 for (int j=i+1; j<NumberOfBodies; j++) {
@@ -111,18 +136,18 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             #pragma omp parallel for shared(timeStepSize) private(i)
             for (i = 0; i < NumberOfBodies; i++){
-                x[i][0] = x[i][0] + timeStepSize * v[i][0];
-                x[i][1] = x[i][1] + timeStepSize * v[i][1];
-                x[i][2] = x[i][2] + timeStepSize * v[i][2];
+                x0[i] = x0[i] + timeStepSize * v0[i];
+                x1[i] = x1[i] + timeStepSize * v1[i];
+                x2[i] = x2[i] + timeStepSize * v2[i];
             }
 
             #pragma omp parallel for reduction(max:maxV) shared(timeStepSize) private(i)
             for (i = 0; i < NumberOfBodies; i++){
-                v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
-                v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
-                v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
+                v0[i] = v0[i] + timeStepSize * force0[i] / mass[i];
+                v1[i] = v1[i] + timeStepSize * force1[i] / mass[i];
+                v2[i] = v2[i] + timeStepSize * force2[i] / mass[i];
 
-                maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
+                maxV = std::max(maxV, std::sqrt(v0[i]*v0[i] + v1[i]*v1[i] + v2[i]*v2[i]));
             }
 
             t += timeStepSize;
@@ -135,24 +160,124 @@ class NBodySimulationParallelised : public NBodySimulation {
         double force_calculation (int i, int j, int direction){
             // #pragma omp simd reduction(min:minDx)
             // Euclidean distance
-            const double distance = sqrt(
-                                        (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
-                                        (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
-                                        (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
-                                        );
+            // const double distance = sqrt(
+            //                             (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
+            //                             (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
+            //                             (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
+            //                             );
 
+
+            // const double distance3 = distance * distance * distance;
+
+            // // #pragma omp critical(minDx) // This harms performance -> mention in report?
+            // // #pragma omp atomic write // This harms performance, but less than critical -> mention in report?
+            // minDx = std::min( minDx,distance );
+
+            // return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
+            const double distance = sqrt(
+                (x0[j]-x0[i]) * (x0[j]-x0[i]) +
+                (x1[j]-x1[i]) * (x1[j]-x1[i]) +
+                (x2[j]-x2[i]) * (x2[j]-x2[i])
+            );
 
             const double distance3 = distance * distance * distance;
+            minDx = std::min(minDx, distance);
 
-            // #pragma omp critical(minDx) // This harms performance -> mention in report?
-            // #pragma omp atomic write // This harms performance, but less than critical -> mention in report?
-            minDx = std::min( minDx,distance );
+            double x_diff;
+            switch(direction) {
+                case 0: x_diff = x0[i] - x0[j]; break;
+                case 1: x_diff = x1[i] - x1[j]; break;
+                case 2: x_diff = x2[i] - x2[j]; break;
+            }
 
-            return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
+            return x_diff * mass[i]*mass[j] / distance3;
         }
-    private:
-        int i; // Declared as private variable to use it in shared
-};
+
+        bool hasReachedEnd () {
+            return t > tFinal;
+            }
+
+            void takeSnapshot () {
+            if (t >= tPlot) {
+                printParaviewSnapshot();
+                printSnapshotSummary();
+                tPlot += tPlotDelta;
+            }
+            }
+
+
+            void openParaviewVideoFile () {
+            videoFile.open("paraview-output/result.pvd");
+            videoFile << "<?xml version=\"1.0\"?>" << std::endl
+                        << "<VTKFile type=\"Collection\""
+                " version=\"0.1\""
+                " byte_order=\"LittleEndian\""
+                " compressor=\"vtkZLibDataCompressor\">" << std::endl
+                        << "<Collection>";
+            }
+
+            void closeParaviewVideoFile () {
+            videoFile << "</Collection>"
+                        << "</VTKFile>" << std::endl;
+            videoFile.close();
+            }
+
+            void printParaviewSnapshot () {
+            static int counter = -1;
+            counter++;
+            std::stringstream filename, filename_nofolder;
+            filename << "paraview-output/result-" << counter <<  ".vtp";
+            filename_nofolder << "result-" << counter <<  ".vtp";
+            std::ofstream out( filename.str().c_str() );
+            out << "<VTKFile type=\"PolyData\" >" << std::endl
+                << "<PolyData>" << std::endl
+                << " <Piece NumberOfPoints=\"" << NumberOfBodies << "\">" << std::endl
+                << "  <Points>" << std::endl
+                << "   <DataArray type=\"Float64\""
+                " NumberOfComponents=\"3\""
+                " format=\"ascii\">";
+
+            for (int i=0; i<NumberOfBodies; i++) {
+                out << x0[i]
+                    << " "
+                    << x1[i]
+                    << " "
+                    << x2[i]
+                    << " ";
+            }
+
+            out << "   </DataArray>" << std::endl
+                << "  </Points>" << std::endl
+                << " </Piece>" << std::endl
+                << "</PolyData>" << std::endl
+                << "</VTKFile>"  << std::endl;
+
+            out.close();
+
+            videoFile << "<DataSet timestep=\"" << counter
+                        << "\" group=\"\" part=\"0\" file=\"" << filename_nofolder.str()
+                        << "\"/>" << std::endl;
+            }
+
+            void printSnapshotSummary () {
+            std::cout << "plot next snapshot"
+                        << ",\t time step=" << timeStepCounter
+                        << ",\t t="         << t
+                        << ",\t dt="        << timeStepSize
+                        << ",\t v_max="     << maxV
+                        << ",\t dx_min="    << minDx
+                        << std::endl;
+            }
+
+            void printSummary () {
+            std::cout << "Number of remaining objects: " << NumberOfBodies << std::endl;
+            std::cout << "Position of first remaining object: "
+                        << x0[0] << ", " << x1[0] << ", " << x2[0] << std::endl;
+            }
+                private:
+                    int i; // Declared as private variable to use it in shared
+                    double *x0, *x1, *x2, *v0, *v1, *v2, *mass;
+            };
 
 /**
  * Main routine.
