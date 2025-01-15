@@ -25,6 +25,55 @@ class NBodySimulationParallelised : public NBodySimulation {
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
         }
 
+        void setUp (int argc, char** argv) {
+            checkInput(argc, argv);
+
+            NumberOfBodies = (argc-4) / 7;
+
+            x    = new double*[NumberOfBodies];
+            v    = new double*[NumberOfBodies];
+            mass = new double [NumberOfBodies];
+
+            int readArgument = 1;
+
+            tPlotDelta   = std::stof(argv[readArgument]); readArgument++;
+            tFinal       = std::stof(argv[readArgument]); readArgument++;
+            timeStepSize = std::stof(argv[readArgument]); readArgument++;
+
+            for (int i=0; i<NumberOfBodies; i++) {
+                x[i] = new double[3];
+                v[i] = new double[3];
+
+                x[i][0] = std::stof(argv[readArgument]); readArgument++;
+                x[i][1] = std::stof(argv[readArgument]); readArgument++;
+                x[i][2] = std::stof(argv[readArgument]); readArgument++;
+
+                v[i][0] = std::stof(argv[readArgument]); readArgument++;
+                v[i][1] = std::stof(argv[readArgument]); readArgument++;
+                v[i][2] = std::stof(argv[readArgument]); readArgument++;
+
+                mass[i] = std::stof(argv[readArgument]); readArgument++;
+
+                if (mass[i]<=0.0 ) {
+                std::cerr << "invalid mass for body " << i << std::endl;
+                exit(-2);
+                }
+            }
+
+            std::cout << "created setup with " << NumberOfBodies << " bodies"
+                        << std::endl;
+
+            if (tPlotDelta<=0.0) {
+                std::cout << "plotting switched off" << std::endl;
+                tPlot = tFinal + 1.0;
+            }
+            else {
+                std::cout << "plot initial setup plus every " << tPlotDelta
+                        << " time units" << std::endl;
+                tPlot = 0.0;
+            }
+            }
+
         void updateBody () {
             timeStepCounter++;
             maxV   = 0.0;
