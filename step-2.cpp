@@ -39,8 +39,10 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
+            int i = 0;
             #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
-            for (int i=0; i<NumberOfBodies; i++) {
+            for (i = 0; i<NumberOfBodies; i++) {
+                #pragma omp parallel for
                 for (int j=i+1; j<NumberOfBodies; j++) {
                     if(i!=j){
                         double f0 = force_calculation(i,j,0);
@@ -58,21 +60,22 @@ class NBodySimulationParallelised : public NBodySimulation {
                 }
             }
 
-            #pragma omp parallel for    
-            for (int i=0; i < NumberOfBodies; i++){
+            #pragma omp parallel for shared(timeStepSize) private(i)
+            for (i = 0; i < NumberOfBodies; i++){
                 x[i][0] = x[i][0] + timeStepSize * v[i][0];
                 x[i][1] = x[i][1] + timeStepSize * v[i][1];
                 x[i][2] = x[i][2] + timeStepSize * v[i][2];
             }
 
-            #pragma omp parallel for reduction(max:maxV)
-            for (int i=0; i < NumberOfBodies; i++){
+            #pragma omp parallel for reduction(max:maxV) shared(timeStepSize) private(i)
+            for (i = 0; i < NumberOfBodies; i++){
                 v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
                 v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
                 v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
 
                 maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
             }
+
             t += timeStepSize;
 
             delete[] force0;
@@ -88,13 +91,18 @@ class NBodySimulationParallelised : public NBodySimulation {
                                         (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
                                         (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
                                         );
-                                        
+
+
             const double distance3 = distance * distance * distance;
 
+            // #pragma omp critical(minDx) // This harms performance -> mention in report?
+            // #pragma omp atomic write // This harms performance, but less than critical -> mention in report?
             minDx = std::min( minDx,distance );
 
             return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
         }
+    private:
+        int i; // Declared as private variable to use it in shared pragmas
 };
 
 /**
