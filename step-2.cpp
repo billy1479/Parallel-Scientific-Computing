@@ -2,7 +2,6 @@
 #include <immintrin.h>
 #include <omp.h>
 
-
 #include "NBodySimulationVectorised.cpp"
 
 /**
@@ -21,9 +20,12 @@
 
 class NBodySimulationParallelised : public NBodySimulation {
     public:
-        void updateBody () {
-            std::cout << "Running parallelised version" << std::endl;
+        NBodySimulationParallelised() {
+            omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
+            std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
+        }
 
+        void updateBody () {
             timeStepCounter++;
             maxV   = 0.0;
             minDx  = std::numeric_limits<double>::max();
@@ -45,6 +47,7 @@ class NBodySimulationParallelised : public NBodySimulation {
                         double f1 = force_calculation(i,j,1);
                         double f2 = force_calculation(i,j,2);
                         
+                        // Tried atomic pragma but it was slower
                         force0[i] += f0;
                         force1[i] += f1;
                         force2[i] += f2;
@@ -55,11 +58,14 @@ class NBodySimulationParallelised : public NBodySimulation {
                 }
             }
 
+            #pragma omp parallel for    
             for (int i=0; i < NumberOfBodies; i++){
                 x[i][0] = x[i][0] + timeStepSize * v[i][0];
                 x[i][1] = x[i][1] + timeStepSize * v[i][1];
                 x[i][2] = x[i][2] + timeStepSize * v[i][2];
             }
+
+            #pragma omp parallel for reduction(max:maxV)
             for (int i=0; i < NumberOfBodies; i++){
                 v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
                 v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
@@ -74,6 +80,21 @@ class NBodySimulationParallelised : public NBodySimulation {
             delete[] force2;
         }
 
+        double force_calculation (int i, int j, int direction){
+            // #pragma omp simd reduction(min:minDx)
+            // Euclidean distance
+            const double distance = sqrt(
+                                        (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
+                                        (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
+                                        (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
+                                        );
+                                        
+            const double distance3 = distance * distance * distance;
+
+            minDx = std::min( minDx,distance );
+
+            return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
+        }
 };
 
 /**
