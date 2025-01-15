@@ -1,7 +1,6 @@
 #include <iomanip>
 #include <immintrin.h>
 #include <omp.h>
-#include <vector>
 
 #include "NBodySimulationVectorised.cpp"
 
@@ -41,8 +40,7 @@ class NBodySimulationParallelised : public NBodySimulation {
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
             int i = 0;
-            // reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
-            #pragma omp parallel for schedule(dynamic) 
+            #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
             for (i = 0; i<NumberOfBodies; i++) {
                 #pragma omp parallel for
                 for (int j=i+1; j<NumberOfBodies; j++) {
@@ -80,9 +78,9 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             t += timeStepSize;
 
-            // delete[] force0;
-            // delete[] force1;
-            // delete[] force2;
+            delete[] force0;
+            delete[] force1;
+            delete[] force2;
         }
 
         double force_calculation (int i, int j, int direction){
@@ -104,7 +102,7 @@ class NBodySimulationParallelised : public NBodySimulation {
             return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
         }
     private:
-        int i; // Declared as private variable to use it in shared pragmas
+        int i; // Declared as private variable to use it in shared
 };
 
 /**
