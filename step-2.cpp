@@ -21,6 +21,7 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
+            std::cout << "Testing hamitlon" << std::endl;
             omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
         }
@@ -29,10 +30,6 @@ class NBodySimulationParallelised : public NBodySimulation {
             checkInput(argc, argv);
 
             NumberOfBodies = (argc-4) / 7;
-
-            // x    = new double*[NumberOfBodies];
-            // v    = new double*[NumberOfBodies];
-            // mass = new double [NumberOfBodies];
 
             x0 = new double[NumberOfBodies];  // x direction positions
             x1 = new double[NumberOfBodies];  // y direction positions
@@ -51,19 +48,6 @@ class NBodySimulationParallelised : public NBodySimulation {
             timeStepSize = std::stof(argv[readArgument]); readArgument++;
 
             for (int i=0; i<NumberOfBodies; i++) {
-                // x[i] = new double[3];
-                // v[i] = new double[3];
-
-                // x[i][0] = std::stof(argv[readArgument]); readArgument++;
-                // x[i][1] = std::stof(argv[readArgument]); readArgument++;
-                // x[i][2] = std::stof(argv[readArgument]); readArgument++;
-
-                // v[i][0] = std::stof(argv[readArgument]); readArgument++;
-                // v[i][1] = std::stof(argv[readArgument]); readArgument++;
-                // v[i][2] = std::stof(argv[readArgument]); readArgument++;
-
-                // mass[i] = std::stof(argv[readArgument]); readArgument++;
-
                 // Modified array declarations
 
                 // Reading positions
@@ -78,7 +62,6 @@ class NBodySimulationParallelised : public NBodySimulation {
 
                 mass[i] = std::stof(argv[readArgument]); readArgument++;
                 
-
                 if (mass[i]<=0.0 ) {
                 std::cerr << "invalid mass for body " << i << std::endl;
                 exit(-2);
@@ -114,7 +97,7 @@ class NBodySimulationParallelised : public NBodySimulation {
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
             int i = 0;
-            #pragma omp parallel for collapse(2) schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
+            #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
             for (i = 0; i<NumberOfBodies; i++) {
                 #pragma omp parallel for
                 for (int j=i+1; j<NumberOfBodies; j++) {
@@ -158,22 +141,6 @@ class NBodySimulationParallelised : public NBodySimulation {
         }
 
         double force_calculation (int i, int j, int direction){
-            // #pragma omp simd reduction(min:minDx)
-            // Euclidean distance
-            // const double distance = sqrt(
-            //                             (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
-            //                             (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
-            //                             (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
-            //                             );
-
-
-            // const double distance3 = distance * distance * distance;
-
-            // // #pragma omp critical(minDx) // This harms performance -> mention in report?
-            // // #pragma omp atomic write // This harms performance, but less than critical -> mention in report?
-            // minDx = std::min( minDx,distance );
-
-            // return (x[i][direction]-x[j][direction]) * mass[i]*mass[j] / distance3;
             const double distance = sqrt(
                 (x0[j]-x0[i]) * (x0[j]-x0[i]) +
                 (x1[j]-x1[i]) * (x1[j]-x1[i]) +
@@ -204,7 +171,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                 tPlot += tPlotDelta;
             }
             }
-
 
             void openParaviewVideoFile () {
             videoFile.open("paraview-output/result.pvd");
