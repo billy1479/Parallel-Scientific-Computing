@@ -109,7 +109,7 @@ class NBodySimulationVectorised : public NBodySimulation {
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
-            #pragma omp simd collapse(2) reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies]) // HAVE OPTIMISED BY USING SIMD TO vectorise THE LOOP
+            #pragma omp simd reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies]) // HAVE OPTIMISED BY USING SIMD TO vectorise THE LOOP
             for (int i=0; i<NumberOfBodies; i++) { // HAVE OPTIMISED BY USING VARIABLES TO STORE THE FORCE CALCULATION
                 for (int j=i+1; j<NumberOfBodies; j++) {
                     if(i!=j){
