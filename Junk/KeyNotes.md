@@ -6,7 +6,7 @@
 
 # Step-2 - Parallelisation
 - Brought SIMD enabled maths fucntions from step-1
-- enabled parallel for schedule(dynamic) on force update loop
+- enabled parallel for schedule(static) on force update loop -> dynamic wasn't used as each iteration has the same computational load
 - enabled parallelisation for the subloop from above
 - Ensuring variable visiblty via shared() and private() for loop definitions -> see lecture slides for more information in report -> variable i made private variable to do this
 - All-to-one synch for the for loop updating forces for force0, force1, force2 

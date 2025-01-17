@@ -21,7 +21,7 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            std::cout << "Testing hamitlon" << std::endl;
+            std::cout << "Step-2: Hamilton" << std::endl;
             omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
         }
@@ -97,7 +97,7 @@ class NBodySimulationParallelised : public NBodySimulation {
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
             int i = 0;
-            #pragma omp parallel for schedule(dynamic) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
+            #pragma omp parallel for schedule(static, 3) reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
             for (i = 0; i<NumberOfBodies; i++) {
                 #pragma omp parallel for
                 for (int j=i+1; j<NumberOfBodies; j++) {
