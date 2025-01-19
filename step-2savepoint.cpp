@@ -21,11 +21,9 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            const int chunk = (NumberOfBodies / omp_get_max_threads()) / 4;
+            std::cout << "Step-2: Hamilton" << std::endl;
             omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
-            omp_set_nested(0); // Disable nested parallelism -> reduces overhead
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
-            std::cout << "Chunk size: " << chunk << std::endl;
         }
 
         void setUp (int argc, char** argv) {
@@ -89,72 +87,44 @@ class NBodySimulationParallelised : public NBodySimulation {
             maxV   = 0.0;
             minDx  = std::numeric_limits<double>::max();
 
+            // force0 = force along x direction
+            // force1 = force along y direction
+            // force2 = force along z direction
             double* force0 = new double[NumberOfBodies]();
             double* force1 = new double[NumberOfBodies]();
             double* force2 = new double[NumberOfBodies]();
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
-    
-            #pragma omp parallel
-                {
-                    double local_minDx = std::numeric_limits<double>::max();
-                    
-                    // Single loop parallelization with better work distribution
-                    #pragma omp for schedule(dynamic, chunk) reduction(min:minDx)
-                    for (int i = 0; i < NumberOfBodies - 1; i++) {
-                        double local_f0[NumberOfBodies] = {0};
-                        double local_f1[NumberOfBodies] = {0};
-                        double local_f2[NumberOfBodies] = {0};
+
+            int i = 0;
+            #pragma omp parallel for reduction(+:force0[:NumberOfBodies],force1[:NumberOfBodies],force2[:NumberOfBodies])
+            for (i = 0; i<NumberOfBodies; i++) {
+                #pragma omp parallel for
+                for (int j=i+1; j<NumberOfBodies; j++) {
+                    if(i!=j){
+                        double f0 = force_calculation(i,j,0);
+                        double f1 = force_calculation(i,j,1);
+                        double f2 = force_calculation(i,j,2);
                         
-                        for (int j = i + 1; j < NumberOfBodies; j++) {
-                            // Force calculation - method moved to here
-                            const double dx = x0[j] - x0[i];
-                            const double dy = x1[j] - x1[i];
-                            const double dz = x2[j] - x2[i];
-
-                            const double distance = sqrt(dx*dx + dy*dy + dz*dz);
-                            local_minDx = std::min(local_minDx, distance);
-
-                            const double factor = mass[i] * mass[j] / (distance * distance * distance);
-                            
-                            const double fx = dx * factor;
-                            const double fy = dy * factor;
-                            const double fz = dz * factor;
-
-                            local_f0[i] -= fx;
-                            local_f1[i] -= fy;
-                            local_f2[i] -= fz;
-                            local_f0[j] += fx;
-                            local_f1[j] += fy;
-                            local_f2[j] += fz;
-                        }
-                        
-                        // Atomic updates for force accumulation
-                        #pragma omp critical
-                        {
-                            for (int k = 0; k < NumberOfBodies; k++) {
-                                force0[k] += local_f0[k];
-                                force1[k] += local_f1[k];
-                                force2[k] += local_f2[k];
-                            }
-                        }
-                    }
-                    
-                    #pragma omp critical
-                    {
-                        minDx = std::min(minDx, local_minDx);
+                        // Tried atomic pragma but it was slower
+                        force0[i] += f0;
+                        force1[i] += f1;
+                        force2[i] += f2;
+                        force0[j] -= f0;
+                        force1[j] -= f1;
+                        force2[j] -= f2;
                     }
                 }
-            
+            }
 
-            #pragma omp parallel for simd schedule(static) shared(timeStepSize) private(i)
+            #pragma omp parallel for shared(timeStepSize) private(i)
             for (i = 0; i < NumberOfBodies; i++){
                 x0[i] = x0[i] + timeStepSize * v0[i];
                 x1[i] = x1[i] + timeStepSize * v1[i];
                 x2[i] = x2[i] + timeStepSize * v2[i];
             }
 
-            #pragma omp parallel for simd schedule(static) reduction(max:maxV) shared(timeStepSize) private(i)
+            #pragma omp parallel for reduction(max:maxV) shared(timeStepSize) private(i)
             for (i = 0; i < NumberOfBodies; i++){
                 v0[i] = v0[i] + timeStepSize * force0[i] / mass[i];
                 v1[i] = v1[i] + timeStepSize * force1[i] / mass[i];
@@ -168,6 +138,26 @@ class NBodySimulationParallelised : public NBodySimulation {
             delete[] force0;
             delete[] force1;
             delete[] force2;
+        }
+
+        double force_calculation (int i, int j, int direction){
+            const double distance = sqrt(
+                (x0[j]-x0[i]) * (x0[j]-x0[i]) +
+                (x1[j]-x1[i]) * (x1[j]-x1[i]) +
+                (x2[j]-x2[i]) * (x2[j]-x2[i])
+            );
+
+            const double distance3 = distance * distance * distance;
+            minDx = std::min(minDx, distance);
+
+            double x_diff;
+            switch(direction) {
+                case 0: x_diff = x0[i] - x0[j]; break;
+                case 1: x_diff = x1[i] - x1[j]; break;
+                case 2: x_diff = x2[i] - x2[j]; break;
+            }
+
+            return x_diff * mass[i]*mass[j] / distance3;
         }
 
         bool hasReachedEnd () {
@@ -253,8 +243,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                 private:
                     int i; // Declared as private variable to use it in shared
                     double *x0, *x1, *x2, *v0, *v1, *v2, *mass;
-
-                    int chunk;
             };
 
 /**
