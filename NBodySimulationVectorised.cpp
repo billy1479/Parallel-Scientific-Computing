@@ -80,26 +80,6 @@ class NBodySimulationVectorised : public NBodySimulation {
             }
         }
 
-
-        #pragma omp declare simd // SIMD enabled version of the square root function
-        double simd_sqrt(float x) {
-            return sqrt(x);
-        }
-
-        inline double simd_max(double a, double b) { // Open mp max function
-            __m128d va = _mm_set_sd(a);
-            __m128d vb = _mm_set_sd(b);
-            __m128d vmax = _mm_max_sd(va, vb);
-            return _mm_cvtsd_f64(vmax);
-        }
-
-        inline double simd_min(double a, double b) { // Open mp min function
-            __m128d va = _mm_set_sd(a);
-            __m128d vb = _mm_set_sd(b);
-            __m128d vmin = _mm_min_sd(va, vb);
-            return _mm_cvtsd_f64(vmin);
-        }
-
         void updateBody () {
             timeStepCounter++;
             maxV   = 0.0;
@@ -111,7 +91,7 @@ class NBodySimulationVectorised : public NBodySimulation {
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
-            #pragma omp simd collapse(2) reduction(+: force0[:NumberOfBodies], force1[:NumberOfBodies], force2[:NumberOfBodies]) // HAVE OPTIMISED BY USING SIMD TO vectorise THE LOOP
+            #pragma omp simd collapse(2) // HAVE OPTIMISED BY USING SIMD TO vectorise THE LOOP
             for (int i=0; i<NumberOfBodies; i++) { // HAVE OPTIMISED BY USING VARIABLES TO STORE THE FORCE CALCULATION
                 for (int j=i+1; j<NumberOfBodies; j++) {
                     if(i!=j){
@@ -131,13 +111,14 @@ class NBodySimulationVectorised : public NBodySimulation {
                 }
             }
 
+            #pragma omp simd
             for (int i=0; i < NumberOfBodies; i++){
                 x_pos[i] += timeStepSize * x_vel[i];
                 y_pos[i] += timeStepSize * y_vel[i];
                 z_pos[i] += timeStepSize * z_vel[i];
             }
 
-
+            #pragma omp simd
            for (int i=0; i < NumberOfBodies; i++) {
                 x_vel[i] += timeStepSize * force0[i] / mass[i];
                 y_vel[i] += timeStepSize * force1[i] / mass[i];

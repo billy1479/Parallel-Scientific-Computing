@@ -5,6 +5,9 @@ Repo for PSC courseworks
 Use this for creating initial conditions
 - python3 create_initial_conditions.py --final-time 60 --snapshots 1 --executable-name  ./step-0 --min-mass 0.003 --max-mass 0.01 --dt 1 --N 2
 
+
+python3 create_initial_conditions.py --final-time 60 --snapshots 1 --executable-name  ./step-0 --min-mass 1 --max-mass 3 --dt 1 --N 10^C
+
 dt = 0.1
 n = 10
 
