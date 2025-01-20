@@ -99,7 +99,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                 {
                     double local_minDx = std::numeric_limits<double>::max();
                     
-                    // Single loop parallelization with better work distribution
                     #pragma omp for schedule(dynamic, chunk) reduction(min:minDx)
                     for (int i = 0; i < NumberOfBodies - 1; i++) {
                         double local_f0[NumberOfBodies] = {0};
@@ -129,7 +128,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                             local_f2[j] += fz;
                         }
                         
-                        // Atomic updates for force accumulation
                         #pragma omp critical
                         {
                             for (int k = 0; k < NumberOfBodies; k++) {
