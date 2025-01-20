@@ -21,17 +21,19 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            const int chunk = (NumberOfBodies / omp_get_max_threads()) / 4;
             omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
             omp_set_nested(0); // Disable nested parallelism -> reduces overhead
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
-            std::cout << "Chunk size: " << chunk << std::endl;
+            
         }
 
         void setUp (int argc, char** argv) {
             checkInput(argc, argv);
 
             NumberOfBodies = (argc-4) / 7;
+
+            const int chunk = (NumberOfBodies / omp_get_max_threads()) / 4;
+            std::cout << "Chunk size: " << chunk << std::endl;
 
             x0 = new double[NumberOfBodies];  // x direction positions
             x1 = new double[NumberOfBodies];  // y direction positions
