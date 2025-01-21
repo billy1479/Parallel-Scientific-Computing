@@ -21,7 +21,7 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            omp_set_num_threads(5); // Set number of threads to maximum available
+            omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
             omp_set_nested(0); // Disable nested parallelism -> reduces overhead
             std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;   
         }
@@ -30,10 +30,6 @@ class NBodySimulationParallelised : public NBodySimulation {
             checkInput(argc, argv);
 
             NumberOfBodies = (argc-4) / 7;
-
-            const int chunk = std::max(32, NumberOfBodies / (omp_get_max_threads() * 2));
-
-            std::cout << "Chunk size: " << chunk << std::endl;
 
             x0 = new double[NumberOfBodies];  // x direction positions
             x1 = new double[NumberOfBodies];  // y direction positions
@@ -97,7 +93,7 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
     
-            #pragma omp parallel for schedule(dynamic, chunk) \
+            #pragma omp parallel for \
                 reduction(min:minDx) \
                 reduction(+:force0[:NumberOfBodies]) \
                 reduction(+:force1[:NumberOfBodies]) \
@@ -127,7 +123,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                 }
             }
             
-
             #pragma omp parallel for simd schedule(static) shared(timeStepSize)
             for (i = 0; i < NumberOfBodies; i++){
                 x0[i] = x0[i] + timeStepSize * v0[i];
@@ -231,8 +226,6 @@ class NBodySimulationParallelised : public NBodySimulation {
                 private:
                     int i; // Declared as private variable to use it in shared
                     double *x0, *x1, *x2, *v0, *v1, *v2, *mass;
-
-                    int chunk;
             };
 
 /**
