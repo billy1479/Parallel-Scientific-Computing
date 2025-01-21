@@ -21,9 +21,8 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
-            omp_set_nested(0); // Disable nested parallelism -> reduces overhead
-            std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;   
+            omp_set_num_threads(omp_get_max_threads()); 
+            omp_set_nested(0); 
         }
 
         void setUp (int argc, char** argv) {

@@ -28,8 +28,6 @@ class NBodySimulationVectorised : public NBodySimulation {
         }
 
         void setUp(int argc, char** argv) {
-            std::cout << "Vectorised: Hamilton" << std::endl;
-
             checkInput(argc, argv);
 
             NumberOfBodies = (argc-4) / 7;
