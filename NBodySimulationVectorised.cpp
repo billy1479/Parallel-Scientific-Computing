@@ -89,20 +89,20 @@ class NBodySimulationVectorised : public NBodySimulation {
             double* force1 = new double[NumberOfBodies]();
             double* force2 = new double[NumberOfBodies]();
 
-            if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
+            if (NumberOfBodies == 1) minDx = 0;
 
-            #pragma omp simd collapse(2) // HAVE OPTIMISED BY USING SIMD TO vectorise THE LOOP
-            for (int i=0; i<NumberOfBodies; i++) { // HAVE OPTIMISED BY USING VARIABLES TO STORE THE FORCE CALCULATION
-                for (int j=i+1; j<NumberOfBodies; j++) {
+            #pragma omp simd
+            for (int i = 0; i<NumberOfBodies; i++) {
+                for (int j = i + 1; j<NumberOfBodies; j++) {
                     if(i!=j){
                         double f_0 = force_calculation(i,j,0);
                         double f_1 = force_calculation(i,j,1);
                         double f_2 = force_calculation(i,j,2);
-                        // x,y,z forces acting on particle i.
+
                         force0[i] += f_0;
                         force1[i] += f_1;
                         force2[i] += f_2;
-                        // x,y,z symmetric forces acting on particle j.
+
                         force0[j] -= f_0;
                         force1[j] -= f_1;
                         force2[j] -= f_2;
@@ -116,10 +116,7 @@ class NBodySimulationVectorised : public NBodySimulation {
                 x_pos[i] += timeStepSize * x_vel[i];
                 y_pos[i] += timeStepSize * y_vel[i];
                 z_pos[i] += timeStepSize * z_vel[i];
-            }
 
-            #pragma omp simd
-           for (int i=0; i < NumberOfBodies; i++) {
                 x_vel[i] += timeStepSize * force0[i] / mass[i];
                 y_vel[i] += timeStepSize * force1[i] / mass[i];
                 z_vel[i] += timeStepSize * force2[i] / mass[i];

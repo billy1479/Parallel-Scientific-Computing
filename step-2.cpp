@@ -21,10 +21,9 @@
 class NBodySimulationParallelised : public NBodySimulation {
     public:
         NBodySimulationParallelised() {
-            omp_set_num_threads(omp_get_max_threads()); // Set number of threads to maximum available
+            omp_set_num_threads(5); // Set number of threads to maximum available
             omp_set_nested(0); // Disable nested parallelism -> reduces overhead
-            std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;
-            
+            std::cout << "Number of threads: " << omp_get_max_threads() << std::endl;   
         }
 
         void setUp (int argc, char** argv) {
@@ -32,7 +31,8 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             NumberOfBodies = (argc-4) / 7;
 
-            const int chunk = (NumberOfBodies / omp_get_max_threads()) / 4;
+            const int chunk = std::max(32, NumberOfBodies / (omp_get_max_threads() * 2));
+
             std::cout << "Chunk size: " << chunk << std::endl;
 
             x0 = new double[NumberOfBodies];  // x direction positions
@@ -97,65 +97,43 @@ class NBodySimulationParallelised : public NBodySimulation {
 
             if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
     
-            #pragma omp parallel
-                {
-                    double local_minDx = std::numeric_limits<double>::max();
+            #pragma omp parallel for schedule(dynamic, chunk) \
+                reduction(min:minDx) \
+                reduction(+:force0[:NumberOfBodies]) \
+                reduction(+:force1[:NumberOfBodies]) \
+                reduction(+:force2[:NumberOfBodies])
+            for (int i = 0; i < NumberOfBodies - 1; i++) {
+                for (int j = i + 1; j < NumberOfBodies; j++) {
+                    const double dx = x0[j] - x0[i];
+                    const double dy = x1[j] - x1[i];
+                    const double dz = x2[j] - x2[i];
+
+                    const double distance = sqrt(dx*dx + dy*dy + dz*dz);
+                    minDx = std::min(minDx, distance);
+
+                    const double factor = mass[i] * mass[j] / (distance * distance * distance);
                     
-                    #pragma omp for schedule(dynamic, chunk) reduction(min:minDx)
-                    for (int i = 0; i < NumberOfBodies - 1; i++) {
-                        double local_f0[NumberOfBodies] = {0};
-                        double local_f1[NumberOfBodies] = {0};
-                        double local_f2[NumberOfBodies] = {0};
-                        
-                        for (int j = i + 1; j < NumberOfBodies; j++) {
-                            // Force calculation - method moved to here
-                            const double dx = x0[j] - x0[i];
-                            const double dy = x1[j] - x1[i];
-                            const double dz = x2[j] - x2[i];
+                    const double fx = dx * factor;
+                    const double fy = dy * factor;
+                    const double fz = dz * factor;
 
-                            const double distance = sqrt(dx*dx + dy*dy + dz*dz);
-                            local_minDx = std::min(local_minDx, distance);
-
-                            const double factor = mass[i] * mass[j] / (distance * distance * distance);
-                            
-                            const double fx = dx * factor;
-                            const double fy = dy * factor;
-                            const double fz = dz * factor;
-
-                            local_f0[i] -= fx;
-                            local_f1[i] -= fy;
-                            local_f2[i] -= fz;
-                            local_f0[j] += fx;
-                            local_f1[j] += fy;
-                            local_f2[j] += fz;
-                        }
-                        
-                        #pragma omp critical
-                        {
-                            for (int k = 0; k < NumberOfBodies; k++) {
-                                force0[k] += local_f0[k];
-                                force1[k] += local_f1[k];
-                                force2[k] += local_f2[k];
-                            }
-                        }
-                    }
-                    
-                    #pragma omp critical
-                    {
-                        minDx = std::min(minDx, local_minDx);
-                    }
+                    // Direct updates to force arrays - no local arrays needed
+                    force0[i] -= fx;
+                    force1[i] -= fy;
+                    force2[i] -= fz;
+                    force0[j] += fx;
+                    force1[j] += fy;
+                    force2[j] += fz;
                 }
+            }
             
 
-            #pragma omp parallel for simd schedule(static) shared(timeStepSize) private(i)
+            #pragma omp parallel for simd schedule(static) shared(timeStepSize)
             for (i = 0; i < NumberOfBodies; i++){
                 x0[i] = x0[i] + timeStepSize * v0[i];
                 x1[i] = x1[i] + timeStepSize * v1[i];
                 x2[i] = x2[i] + timeStepSize * v2[i];
-            }
 
-            #pragma omp parallel for simd schedule(static) reduction(max:maxV) shared(timeStepSize) private(i)
-            for (i = 0; i < NumberOfBodies; i++){
                 v0[i] = v0[i] + timeStepSize * force0[i] / mass[i];
                 v1[i] = v1[i] + timeStepSize * force1[i] / mass[i];
                 v2[i] = v2[i] + timeStepSize * force2[i] / mass[i];
