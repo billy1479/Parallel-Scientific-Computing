@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <vector> 
 
 class NBodySimulation {
 
@@ -58,6 +59,14 @@ class NBodySimulation {
   int snapshotCounter;
   int timeStepCounter;
 
+  // Time step analysis storage
+  struct TimeStepMetrics {
+    double timeStep;
+    double energyError;
+    double time;
+  };
+  std::vector<TimeStepMetrics> timeStepHistory;
+  double initialEnergy;
 
  public:
   NBodySimulation ();
@@ -91,6 +100,9 @@ class NBodySimulation {
    * Implement timestepping scheme and force updates.
    */
   void updateBody ();
+  double calculateTotalEnergy();
+  void findOptimalTimeStep(double initialGuess);
+  void adaptiveTimeStep();
 
   /**
    * Check if the last time step has been reached (simulation is completed).
