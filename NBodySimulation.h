@@ -68,6 +68,9 @@ class NBodySimulation {
   std::vector<TimeStepMetrics> timeStepHistory;
   double initialEnergy;
 
+  // Time step analysis storage
+
+
  public:
   NBodySimulation ();
   ~NBodySimulation ();
@@ -103,6 +106,12 @@ class NBodySimulation {
   double calculateTotalEnergy();
   void findOptimalTimeStep(double initialGuess);
   void adaptiveTimeStep();
+  void printEnergySummary();
+  double calculateOrbitalPeriod(int i, int j);
+  double calculateDynamicalTime();
+  void calculateOptimalTimeStep();
+  void checkTimeStepQuality();
+
 
   /**
    * Check if the last time step has been reached (simulation is completed).
