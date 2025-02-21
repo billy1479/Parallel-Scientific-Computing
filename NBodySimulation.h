@@ -111,6 +111,7 @@ class NBodySimulation {
   double calculateDynamicalTime();
   void calculateComprehensiveTimeStep();
   void checkTimeStepQuality();
+  void measureConvergenceOrder();
 
 
   /**

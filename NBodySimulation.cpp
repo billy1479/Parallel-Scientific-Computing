@@ -102,10 +102,13 @@ void NBodySimulation::setUp(int argc, char** argv) {
           exit(-2);
       }
   }
+  std::cout << "Calculate time step and assign value..." << std::endl;
   calculateComprehensiveTimeStep();
   std::cout << "Checking time step quality..." << std::endl;
   checkTimeStepQuality();
-  std::cout << "Finding optimal time step..." << std::endl;
+  // std::cout << "Finding optimal time step..." << std::endl;
+  std::cout << "Measuring convergence order..." << std::endl;
+  measureConvergenceOrder();
   
   // Configure plotting
   if (tPlotDelta <= 0.0) {
@@ -673,6 +676,122 @@ void NBodySimulation::calculateComprehensiveTimeStep() {
     double memoryPerBody = 6 * sizeof(double) + sizeof(double*) * 2;  // positions, velocities, mass
     double totalMemoryMB = (NumberOfBodies * memoryPerBody) / (1024 * 1024);
     std::cout << "Estimated memory usage: " << totalMemoryMB << " MB" << std::endl;
+}
+
+void NBodySimulation::measureConvergenceOrder() {
+  // Store the original time step
+  double originalTimeStep = timeStepSize;
+  
+  // Set up a reference solution with a very small time step
+  double referenceTimeStep = originalTimeStep / 64.0;
+  
+  // Save initial state
+  std::vector<std::vector<double>> initialX(NumberOfBodies, std::vector<double>(3));
+  std::vector<std::vector<double>> initialV(NumberOfBodies, std::vector<double>(3));
+  
+  for (int i = 0; i < NumberOfBodies; i++) {
+      for (int d = 0; d < 3; d++) {
+          initialX[i][d] = x[i][d];
+          initialV[i][d] = v[i][d];
+      }
+  }
+  
+  // Time to simulate for convergence testing
+  double testTime = 1.0;  // Simulate for 1 time unit
+  
+  // Reference solution
+  timeStepSize = referenceTimeStep;
+  int refSteps = static_cast<int>(testTime / timeStepSize);
+  
+  for (int step = 0; step < refSteps; step++) {
+      updateBody();
+  }
+  
+  // Store reference solution
+  std::vector<std::vector<double>> referenceX(NumberOfBodies, std::vector<double>(3));
+  
+  for (int i = 0; i < NumberOfBodies; i++) {
+      for (int d = 0; d < 3; d++) {
+          referenceX[i][d] = x[i][d];
+      }
+  }
+  
+  // Test with different time steps
+  std::vector<double> timeSteps;
+  std::vector<double> errors;
+  
+  // Use time steps that are powers of 2 times the reference
+  timeSteps.push_back(referenceTimeStep * 2);   // h/32
+  timeSteps.push_back(referenceTimeStep * 4);   // h/16
+  timeSteps.push_back(referenceTimeStep * 8);   // h/8
+  timeSteps.push_back(referenceTimeStep * 16);  // h/4
+  timeSteps.push_back(referenceTimeStep * 32);  // h/2
+  
+  for (double testTimeStep : timeSteps) {
+      // Reset to initial state
+      for (int i = 0; i < NumberOfBodies; i++) {
+          for (int d = 0; d < 3; d++) {
+              x[i][d] = initialX[i][d];
+              v[i][d] = initialV[i][d];
+          }
+      }
+      
+      // Run with current time step
+      timeStepSize = testTimeStep;
+      int numSteps = static_cast<int>(testTime / timeStepSize);
+      
+      for (int step = 0; step < numSteps; step++) {
+          updateBody();
+      }
+      
+      // Measure error (RMS of position difference)
+      double sumSquaredError = 0.0;
+      for (int i = 0; i < NumberOfBodies; i++) {
+          for (int d = 0; d < 3; d++) {
+              double err = x[i][d] - referenceX[i][d];
+              sumSquaredError += err * err;
+          }
+      }
+      double rmsError = sqrt(sumSquaredError / (NumberOfBodies * 3));
+      errors.push_back(rmsError);
+      
+      std::cout << "Time step: " << testTimeStep 
+                << ", Error: " << rmsError << std::endl;
+  }
+  
+  // Calculate convergence order using log-log linear regression
+  double sumLogTimeStep = 0.0;
+  double sumLogError = 0.0;
+  double sumLogTimeStepSquared = 0.0;
+  double sumLogTimeStepLogError = 0.0;
+  int n = timeSteps.size();
+  
+  for (int i = 0; i < n; i++) {
+      double logTimeStep = log(timeSteps[i]);
+      double logError = log(errors[i]);
+      
+      sumLogTimeStep += logTimeStep;
+      sumLogError += logError;
+      sumLogTimeStepSquared += logTimeStep * logTimeStep;
+      sumLogTimeStepLogError += logTimeStep * logError;
+  }
+  
+  // Slope of the best-fit line gives the convergence order
+  double convergenceOrder = (n * sumLogTimeStepLogError - sumLogTimeStep * sumLogError) /
+                            (n * sumLogTimeStepSquared - sumLogTimeStep * sumLogTimeStep);
+  
+  std::cout << "Measured convergence order: " << convergenceOrder << std::endl;
+  
+  // Restore original time step
+  timeStepSize = originalTimeStep;
+  
+  // Reset to initial state
+  for (int i = 0; i < NumberOfBodies; i++) {
+      for (int d = 0; d < 3; d++) {
+          x[i][d] = initialX[i][d];
+          v[i][d] = initialV[i][d];
+      }
+  }
 }
 
 void NBodySimulation::checkTimeStepQuality() {
