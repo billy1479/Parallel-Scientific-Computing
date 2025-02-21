@@ -109,7 +109,7 @@ class NBodySimulation {
   void printEnergySummary();
   double calculateOrbitalPeriod(int i, int j);
   double calculateDynamicalTime();
-  void calculateOptimalTimeStep();
+  void calculateComprehensiveTimeStep();
   void checkTimeStepQuality();
 
 

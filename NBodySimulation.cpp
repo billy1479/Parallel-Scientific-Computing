@@ -74,6 +74,10 @@ void NBodySimulation::setUp(int argc, char** argv) {
   tPlotDelta = std::stof(argv[readArgument++]);
   tFinal = std::stof(argv[readArgument++]);
   timeStepSize = std::stof(argv[readArgument++]);
+
+  std::cout << "tPlotDelta: " << tPlotDelta << std::endl;
+  std::cout << "tFinal: " << tFinal << std::endl;
+  std::cout << "timeStepSize: " << timeStepSize << std::endl;
   
   // Initialize body data
   for (int i=0; i<NumberOfBodies; i++) {
@@ -98,7 +102,7 @@ void NBodySimulation::setUp(int argc, char** argv) {
           exit(-2);
       }
   }
-  
+  calculateComprehensiveTimeStep();
   std::cout << "Checking time step quality..." << std::endl;
   checkTimeStepQuality();
   std::cout << "Finding optimal time step..." << std::endl;
@@ -251,19 +255,7 @@ void NBodySimulation::updateBody() {
             v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2]
         ));
     }
-    
-    // // Calculate and store time step metrics
-    // double energyAfter = calculateTotalEnergy();
-    // double energyError = std::abs((energyAfter - energyBefore) / energyBefore);
-    // double relativeError = std::abs((energyAfter - energyBefore) / energyBefore);
-    // timeStepHistory.push_back({timeStepSize, energyError, t});
-
-    // if(relativeError > 1e-3) {  // More than 0.1% change
-    //   std::cout << "Warning: Large energy change detected at step " 
-    //             << timeStepCounter << ": " << relativeError * 100 
-    //             << "%" << std::endl;
-    // }
-    
+  
     // Update simulation time
     t += timeStepSize;
     
@@ -393,46 +385,294 @@ double NBodySimulation::calculateDynamicalTime() {
   return sqrt(pow(maxR, 3) / totalMass);
 }
 
-void NBodySimulation::calculateOptimalTimeStep() {
-  // Find shortest orbital period among all pairs
-  double minPeriod = std::numeric_limits<double>::max();
-  for(int i = 0; i < NumberOfBodies; i++) {
-      for(int j = i+1; j < NumberOfBodies; j++) {
-          double period = calculateOrbitalPeriod(i, j);
-          minPeriod = std::min(minPeriod, period);
-      }
-  }
-  
-  // Calculate system's dynamical time
-  double tDynamical = calculateDynamicalTime();
-  
-  // The optimal time step should be small enough to:
-  // 1. Resolve the shortest orbital period (need ~100 steps per orbit)
-  // 2. Resolve the system's dynamical time (need ~100 steps per crossing)
-  double dtFromOrbits = minPeriod / 100.0;
-  double dtFromDynamics = tDynamical / 100.0;
-  
-  // Choose the more restrictive condition
-  double recommendedTimeStep = std::min(dtFromOrbits, dtFromDynamics);
-  
-  std::cout << "\nTime Step Analysis Based on Physical Timescales:" << std::endl;
-  std::cout << "=============================================" << std::endl;
-  std::cout << "Shortest orbital period: " << minPeriod << std::endl;
-  std::cout << "System dynamical time: " << tDynamical << std::endl;
-  std::cout << "Recommended time step: " << recommendedTimeStep << std::endl;
-  std::cout << "\nThis recommendation is based on:" << std::endl;
-  std::cout << "- Resolving the fastest orbital motion in the system" << std::endl;
-  std::cout << "- Ensuring accurate integration of system-wide dynamics" << std::endl;
-  
-  // Provide context for the recommendation
-  if(timeStepSize > recommendedTimeStep) {
-      double ratio = timeStepSize / recommendedTimeStep;
-      std::cout << "\nCurrent time step is " << ratio 
-                << " times larger than recommended." << std::endl;
-      std::cout << "This explains the observed energy conservation issues." << std::endl;
-  } else {
-      std::cout << "\nCurrent time step is within acceptable range." << std::endl;
-  }
+void NBodySimulation::calculateComprehensiveTimeStep() {
+    // This method combines multiple approaches to determine the optimal time step
+    // by considering initial conditions, system properties, and numerical stability
+    
+    // ===== PART 1: PHYSICAL TIMESCALES =====
+    
+    // Calculate characteristic timescales of the system
+    double minOrbitalPeriod = std::numeric_limits<double>::max();
+    double totalMass = 0.0;
+    double maxDistance = 0.0;
+    double minDistance = std::numeric_limits<double>::max();
+    double maxVelocity = 0.0;
+    double maxAcceleration = 0.0;
+    
+    // Calculate center of mass
+    double comX = 0.0, comY = 0.0, comZ = 0.0;
+    for (int i = 0; i < NumberOfBodies; i++) {
+        totalMass += mass[i];
+        comX += mass[i] * x[i][0];
+        comY += mass[i] * x[i][1];
+        comZ += mass[i] * x[i][2];
+    }
+    comX /= totalMass;
+    comY /= totalMass;
+    comZ /= totalMass;
+    
+    // Analyze all body pairs for orbital periods and distances
+    for (int i = 0; i < NumberOfBodies; i++) {
+        // Distance from center of mass (for system size estimate)
+        double distFromCOM = sqrt(
+            pow(x[i][0] - comX, 2) +
+            pow(x[i][1] - comY, 2) +
+            pow(x[i][2] - comZ, 2)
+        );
+        maxDistance = std::max(maxDistance, distFromCOM);
+        
+        // Current velocity magnitude
+        double vel = sqrt(v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2]);
+        maxVelocity = std::max(maxVelocity, vel);
+        
+        // Calculate max acceleration from all pairwise forces
+        for (int j = 0; j < NumberOfBodies; j++) {
+            if (i == j) continue;
+            
+            // Calculate distance between bodies
+            double dx = x[j][0] - x[i][0];
+            double dy = x[j][1] - x[i][1];
+            double dz = x[j][2] - x[i][2];
+            double distSquared = dx*dx + dy*dy + dz*dz;
+            double dist = sqrt(distSquared);
+            
+            minDistance = std::min(minDistance, dist);
+            
+            // For close pairs, calculate orbital period
+            if (i < j) {  // avoid double counting
+                // Two-body orbital period (Kepler's third law)
+                double period = 2.0 * M_PI * sqrt(
+                    pow(dist, 3) / (mass[i] + mass[j])
+                );
+                minOrbitalPeriod = std::min(minOrbitalPeriod, period);
+            }
+            
+            // Calculate acceleration magnitude due to body j
+            double acc = mass[j] / (distSquared * dist);
+            maxAcceleration = std::max(maxAcceleration, acc);
+        }
+    }
+    
+    // ===== PART 2: NUMERICAL STABILITY CRITERIA =====
+    
+    // Safety factor (more conservative for systems with many bodies)
+    double safetyFactor = 0.05 * pow(0.99, std::min(NumberOfBodies / 100, 10)); 
+    
+    // 1. CFL-like condition: dt < dx/v
+    double dtCFL = std::numeric_limits<double>::max();
+    if (maxVelocity > 1e-10) {  // Prevent division by zero
+        dtCFL = safetyFactor * minDistance / maxVelocity;
+    }
+    
+    // 2. Acceleration-based criterion: dt² < dx/a
+    double dtAccel = std::numeric_limits<double>::max();
+    if (maxAcceleration > 1e-10) {  // Prevent division by zero
+        dtAccel = sqrt(safetyFactor * minDistance / maxAcceleration);
+    }
+    
+    // 3. Orbital resolution criterion: need ~100 steps per orbit
+    double dtOrbital = minOrbitalPeriod / 100.0;
+    
+    // 4. System dynamical time (crossing time)
+    double dynTime = sqrt(pow(maxDistance, 3) / totalMass);
+    double dtDynamical = dynTime / 100.0;
+    
+    // 5. Energy conservation - use fewer test steps to avoid memory issues
+    double initialEnergy = calculateTotalEnergy();
+    double dtEnergy = std::min(dtAccel, dtOrbital);  // Start with a physics-based estimate
+    
+    // Only test 2-3 carefully chosen timesteps based on the physics criteria
+    std::vector<double> testSteps;
+    
+    // Add the smallest physics-based timestep
+    double smallestPhysicsStep = std::min({
+        dtAccel, 
+        dtOrbital,
+        dtDynamical,
+        tFinal / 1000.0  // Cap very small steps
+    });
+    
+    // Make sure our test steps are valid
+    if (smallestPhysicsStep <= 0 || !std::isfinite(smallestPhysicsStep)) {
+        smallestPhysicsStep = tFinal / 1000.0;
+    }
+    
+    // Add only a few carefully chosen test steps
+    testSteps.push_back(smallestPhysicsStep);
+    testSteps.push_back(smallestPhysicsStep * 2.0);
+    
+    // For safety with large systems (over 100 bodies), use a simpler approach
+    if (NumberOfBodies > 100) {
+        // For large systems, we'll skip the energy testing and use physics-based criteria only
+        dtEnergy = smallestPhysicsStep;
+        std::cout << "Large system detected: Using physics-based time step without energy testing" << std::endl;
+    } else {
+        // For smaller systems, we can do the full test
+        // Save initial state using stack-based storage for small arrays
+        std::vector<std::vector<std::vector<double>>> xBackup(NumberOfBodies, 
+            std::vector<std::vector<double>>(1, std::vector<double>(3)));
+        std::vector<std::vector<std::vector<double>>> vBackup(NumberOfBodies, 
+            std::vector<std::vector<double>>(1, std::vector<double>(3)));
+        
+        // Save current state
+        for (int i = 0; i < NumberOfBodies; i++) {
+            for (int d = 0; d < 3; d++) {
+                xBackup[i][0][d] = x[i][d];
+                vBackup[i][0][d] = v[i][d];
+            }
+        }
+        
+        double bestError = std::numeric_limits<double>::max();
+        
+        // Test each timestep
+        for (double testStep : testSteps) {
+            // Restore initial state
+            for (int i = 0; i < NumberOfBodies; i++) {
+                for (int d = 0; d < 3; d++) {
+                    x[i][d] = xBackup[i][0][d];
+                    v[i][d] = vBackup[i][0][d];
+                }
+            }
+            
+            // Test this timestep for just a few steps
+            double originalT = t;
+            timeStepSize = testStep;
+            
+            // For smaller systems, we can afford more test steps
+            int numTestSteps = std::min(5, 1000 / NumberOfBodies);
+            for (int step = 0; step < numTestSteps; step++) {
+                updateBody();
+            }
+            
+            // Evaluate energy conservation
+            double finalEnergy = calculateTotalEnergy();
+            double error = std::abs((finalEnergy - initialEnergy) / initialEnergy);
+            
+            std::cout << "Test dt: " << testStep << " -> Energy error: " << error << std::endl;
+            
+            if (error < bestError) {
+                bestError = error;
+                dtEnergy = testStep;
+            }
+            
+            // Reset time
+            t = originalT;
+        }
+        
+        // Restore initial state one last time
+        for (int i = 0; i < NumberOfBodies; i++) {
+            for (int d = 0; d < 3; d++) {
+                x[i][d] = xBackup[i][0][d];
+                v[i][d] = vBackup[i][0][d];
+            }
+        }
+    }
+    
+    // ===== PART 3: DETERMINE FINAL TIME STEP =====
+    
+    // Validate all time steps (replace infinities, NaNs, and zeros with safe values)
+    if (!std::isfinite(dtCFL) || dtCFL <= 0) dtCFL = tFinal / 100.0;
+    if (!std::isfinite(dtAccel) || dtAccel <= 0) dtAccel = tFinal / 100.0;
+    if (!std::isfinite(dtOrbital) || dtOrbital <= 0) dtOrbital = tFinal / 100.0;
+    if (!std::isfinite(dtDynamical) || dtDynamical <= 0) dtDynamical = tFinal / 100.0;
+    if (!std::isfinite(dtEnergy) || dtEnergy <= 0) dtEnergy = tFinal / 100.0;
+    
+    // Gather all criteria
+    std::vector<std::pair<double, std::string>> criteria = {
+        {dtCFL, "CFL condition"},
+        {dtAccel, "Acceleration limit"},
+        {dtOrbital, "Shortest orbital period / 100"},
+        {dtDynamical, "System dynamical time / 100"},
+        {dtEnergy, "Empirical energy conservation"}
+    };
+    
+    // Find the limiting criterion (smallest time step)
+    double finalTimeStep = tFinal / 10.0;  // Start with a reasonable fraction of total time
+    std::string limitingFactor = "Default (tFinal/10)";
+    
+    for (const auto& criterion : criteria) {
+        if (criterion.first > 0 && criterion.first < finalTimeStep) {
+            finalTimeStep = criterion.first;
+            limitingFactor = criterion.second;
+        }
+    }
+    
+    // Additional safety for large systems
+    if (NumberOfBodies > 500) {
+        double safetyScale = 0.8;  // 20% smaller for large systems
+        finalTimeStep *= safetyScale;
+        std::cout << "Applied additional " << (1-safetyScale)*100 << "% safety factor for large system" << std::endl;
+    }
+    
+    // Ensure time step isn't too small compared to simulation length
+    if (finalTimeStep < tFinal / 1e6) {
+        std::cout << "Warning: Calculated time step is extremely small." << std::endl;
+        std::cout << "Consider modifying initial conditions or using a specialized integrator." << std::endl;
+        finalTimeStep = tFinal / 1e6;  // Cap at a reasonable minimum
+    }
+    
+    // Ensure time step isn't too large compared to total simulation time
+    if (finalTimeStep > tFinal / 10.0) {
+        finalTimeStep = tFinal / 10.0;
+        std::cout << "Warning: Calculated time step is very large. Limiting to tFinal/10." << std::endl;
+        limitingFactor = "Maximum limit (tFinal/10)";
+    }
+    
+    // ===== PART 4: OUTPUT RESULTS =====
+    
+    std::cout << "\n==== COMPREHENSIVE TIME STEP ANALYSIS ====" << std::endl;
+    std::cout << "System properties:" << std::endl;
+    std::cout << "  * Bodies: " << NumberOfBodies << std::endl;
+    std::cout << "  * Total mass: " << totalMass << std::endl;
+    std::cout << "  * Max system extent: " << maxDistance << std::endl;
+    std::cout << "  * Min separation: " << minDistance << std::endl;
+    std::cout << "  * Max velocity: " << maxVelocity << std::endl;
+    std::cout << "  * Shortest orbital period: " << minOrbitalPeriod << std::endl;
+    std::cout << "  * System dynamical time: " << dynTime << std::endl;
+    
+    std::cout << "\nTime step criteria:" << std::endl;
+    for (const auto& criterion : criteria) {
+        std::cout << "  * " << criterion.second << ": " << criterion.first;
+        if (criterion.second == limitingFactor) {
+            std::cout << " (LIMITING FACTOR)";
+        }
+        std::cout << std::endl;
+    }
+    
+    std::cout << "\nFinal time step recommendation: " << finalTimeStep << std::endl;
+    std::cout << "Based on: " << limitingFactor << std::endl;
+    
+    // Return information to caller and update timeStepSize
+    timeStepSize = finalTimeStep;
+    
+    // Calculate and store initial energy for future reference
+    initialEnergy = calculateTotalEnergy();
+    
+    // Estimate computational requirements
+    long estimatedSteps = static_cast<long>(tFinal / timeStepSize);
+    std::cout << "\nEstimated number of time steps: " << estimatedSteps << std::endl;
+    
+    // Provide warnings if the computation might be too intensive
+    if (estimatedSteps > 1000000) {
+        std::cout << "WARNING: This simulation will require a very large number of steps." << std::endl;
+        std::cout << "Consider using a larger time step or shorter simulation time." << std::endl;
+    }
+    
+    if (tPlotDelta > 0) {
+        int plotSteps = int(tFinal / tPlotDelta);
+        std::cout << "Will generate approximately " << plotSteps << " snapshots" << std::endl;
+        
+        // Warn about excessive file output
+        if (plotSteps > 1000) {
+            std::cout << "WARNING: Large number of output files will be generated." << std::endl;
+            std::cout << "Consider increasing tPlotDelta." << std::endl;
+        }
+    }
+    
+    // Estimate memory usage (rough approximation)
+    double memoryPerBody = 6 * sizeof(double) + sizeof(double*) * 2;  // positions, velocities, mass
+    double totalMemoryMB = (NumberOfBodies * memoryPerBody) / (1024 * 1024);
+    std::cout << "Estimated memory usage: " << totalMemoryMB << " MB" << std::endl;
 }
 
 void NBodySimulation::checkTimeStepQuality() {
@@ -463,63 +703,4 @@ void NBodySimulation::printSummary() {
   std::cout << "Position of first remaining object: "
             << x[0][0] << ", " << x[0][1] << ", " << x[0][2] << std::endl;
             
-  // if (!timeStepHistory.empty()) {
-  //     auto bestMetrics = std::min_element(
-  //         timeStepHistory.begin(),
-  //         timeStepHistory.end(),
-  //         [](const TimeStepMetrics& a, const TimeStepMetrics& b) -> bool {
-  //             return a.energyError < b.energyError;
-  //         }
-  //     );
-      
-  //     // Calculate average energy error
-  //     double avgError = 0.0;
-  //     for (const auto& metrics : timeStepHistory) {
-  //         avgError += metrics.energyError;
-  //     }
-  //     avgError /= timeStepHistory.size();
-      
-  //     std::cout << "\nTime Step Analysis:" << std::endl;
-  //     std::cout << "-------------------" << std::endl;
-  //     std::cout << "Initial time step: " << timeStepHistory.front().timeStep << std::endl;
-  //     std::cout << "Best time step found: " << bestMetrics->timeStep << std::endl;
-  //     std::cout << "Best energy error: " << bestMetrics->energyError << std::endl;
-  //     std::cout << "Average energy error: " << avgError << std::endl;
-  //     std::cout << "Time of best performance: " << bestMetrics->time << std::endl;
-      
-  //     // Provide recommendations based on energy error
-  //     std::cout << "\nRecommendation:" << std::endl;
-  //     if (bestMetrics->energyError < 1e-6) {
-  //         std::cout << "Time step performance is excellent - current time step is well-suited for this simulation" << std::endl;
-  //     } else if (bestMetrics->energyError < 1e-4) {
-  //         std::cout << "Time step performance is good - current time step provides good accuracy" << std::endl;
-  //     } else {
-  //         std::cout << "Consider using a smaller time step (try " 
-  //                   << bestMetrics->timeStep * 0.5 
-  //                   << ") for better accuracy" << std::endl;
-  //     }
-
-  //     // Add energy conservation analysis
-  //   double finalEnergy = calculateTotalEnergy();
-  //   double totalEnergyError = std::abs((finalEnergy - initialEnergy) / initialEnergy);
-    
-  //   std::cout << "\nEnergy Conservation Analysis:" << std::endl;
-  //   std::cout << "============================" << std::endl;
-  //   std::cout << "Initial Energy: " << initialEnergy << std::endl;
-  //   std::cout << "Final Energy: " << finalEnergy << std::endl;
-  //   std::cout << "Total Energy Error: " << totalEnergyError * 100 << "%" << std::endl;
-    
-  //   // Provide interpretation of results
-  //   if(totalEnergyError < 1e-3) {
-  //       std::cout << "\nTime Step Assessment: EXCELLENT" << std::endl;
-  //       std::cout << "The current time step provides very good energy conservation." << std::endl;
-  //   } else if(totalEnergyError < 1e-2) {
-  //       std::cout << "\nTime Step Assessment: ACCEPTABLE" << std::endl;
-  //       std::cout << "The time step gives reasonable results but could be reduced for better accuracy." << std::endl;
-  //   } else {
-  //       std::cout << "\nTime Step Assessment: NEEDS ADJUSTMENT" << std::endl;
-  //       std::cout << "Consider reducing the time step to improve accuracy." << std::endl;
-  //       std::cout << "Suggested time step: " << timeStepSize * 0.5 << std::endl;
-  //   }
-  // }
 }
