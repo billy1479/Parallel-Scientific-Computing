@@ -48,6 +48,9 @@ class NBodySimulation {
    */
   double minDx;
 
+    /** Current system energy */
+  double currentEnergy;
+
   /**
    * Stream for video output file.
    */
@@ -107,12 +110,7 @@ class NBodySimulation {
   void findOptimalTimeStep(double initialGuess);
   void adaptiveTimeStep();
   void printEnergySummary();
-  double calculateOrbitalPeriod(int i, int j);
-  double calculateDynamicalTime();
-  void calculateComprehensiveTimeStep();
-  void checkTimeStepQuality();
-  void measureConvergenceOrder();
-
+  void calculateStableTimeStep();
 
   /**
    * Check if the last time step has been reached (simulation is completed).
