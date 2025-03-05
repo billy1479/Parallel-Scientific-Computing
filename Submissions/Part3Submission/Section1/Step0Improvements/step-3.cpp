@@ -4,15 +4,19 @@
 
 /**
  * You can compile this file with
- *   make step-0
+ *   make step-3.
  * and run it with
- *   ./step-0
+ *   ./step-3
  *
  * Results will be added to the `paraview-output` directory. In it you will find
  * a result.pvd file that you can open with ParaView. To see the points you will
  * need to look a the properties of result.pvd and select the representation
  * "Point Gaussian". Pressing play will play your time steps.
  */
+
+class NBodySimulationMolecularForces : public NBodySimulation {
+
+};
 
 /**
  * Main routine.
@@ -26,7 +30,7 @@ int main (int argc, char** argv) {
   std::cout << std::setprecision(15);
 
   // Code that initialises and runs the simulation.
-  NBodySimulation nbs;
+  NBodySimulationCollision nbs;
   nbs.setUp(argc,argv);
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
@@ -38,8 +42,6 @@ int main (int argc, char** argv) {
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
-  nbs.printConvergenceData();
 
   return 0;
 }
-

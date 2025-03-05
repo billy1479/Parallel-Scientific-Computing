@@ -38,8 +38,6 @@ int main (int argc, char** argv) {
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
-  nbs.printConvergenceData();
 
   return 0;
 }
-

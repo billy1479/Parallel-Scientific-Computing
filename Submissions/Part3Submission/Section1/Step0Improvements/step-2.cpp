@@ -1,18 +1,24 @@
 #include <iomanip>
 
-#include "NBodySimulation.h"
+#include "NBodySimulationVectorised.cpp"
 
 /**
  * You can compile this file with
- *   make step-0
+ *   make step-2-g++   // Uses the GNU Compiler Collection.
+ *   make step-2-icpx  // Uses the Intel compiler.
  * and run it with
- *   ./step-0
+ *   ./step-2-g++
+ *   ./step-2-icpx
  *
  * Results will be added to the `paraview-output` directory. In it you will find
  * a result.pvd file that you can open with ParaView. To see the points you will
  * need to look a the properties of result.pvd and select the representation
  * "Point Gaussian". Pressing play will play your time steps.
  */
+
+class NBodySimulationParallelised : public NBodySimulationVectorised {
+
+};
 
 /**
  * Main routine.
@@ -26,7 +32,7 @@ int main (int argc, char** argv) {
   std::cout << std::setprecision(15);
 
   // Code that initialises and runs the simulation.
-  NBodySimulation nbs;
+  NBodySimulationParallelised nbs;
   nbs.setUp(argc,argv);
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
@@ -38,8 +44,6 @@ int main (int argc, char** argv) {
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
-  nbs.printConvergenceData();
 
   return 0;
 }
-

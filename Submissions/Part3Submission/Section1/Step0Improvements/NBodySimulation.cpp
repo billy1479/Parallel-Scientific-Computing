@@ -1,11 +1,10 @@
 #include "NBodySimulation.h"
 
 NBodySimulation::NBodySimulation () :
-t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
-x(nullptr), v(nullptr), mass(nullptr),
-x_analytical(nullptr), v_analytical(nullptr), useAnalytical(false),
-timeStepSize(0), maxV(0), minDx(0), videoFile(nullptr),
-snapshotCounter(0), timeStepCounter(0) {};
+  t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
+  x(nullptr), v(nullptr), mass(nullptr),
+  timeStepSize(0), maxV(0), minDx(0), videoFile(nullptr),
+  snapshotCounter(0), timeStepCounter(0) {};
 
 NBodySimulation::~NBodySimulation () {
   if (x != nullptr) {
@@ -20,16 +19,6 @@ NBodySimulation::~NBodySimulation () {
   }
   if (mass != nullptr) {
     delete [] mass;
-  }
-  if (x_analytical != nullptr) {
-    for (int i=0; i<NumberOfBodies; i++)
-      delete [] x_analytical[i];
-    delete [] x_analytical;
-  }
-  if (v_analytical != nullptr) {
-    for (int i=0; i<NumberOfBodies; i++)
-      delete [] v_analytical[i];
-    delete [] v_analytical;
   }
 }
 
@@ -106,12 +95,6 @@ void NBodySimulation::setUp (int argc, char** argv) {
       std::cerr << "invalid mass for body " << i << std::endl;
       exit(-2);
     }
-  }
-
-  useAnalytical = (NumberOfBodies <= 10); // Only use analytical for small systems
-  if (useAnalytical) {
-    initAnalyticalSolution();
-    std::cout << "Using analytical solution for error calculation" << std::endl;
   }
 
   std::cout << "created setup with " << NumberOfBodies << " bodies"
@@ -195,10 +178,6 @@ void NBodySimulation::updateBody () {
   delete[] force0;
   delete[] force1;
   delete[] force2;
-  
-  if (useAnalytical) {
-    updateAnalyticalSolution(t);
-  }
 }
 
 /**
@@ -284,202 +263,4 @@ void NBodySimulation::printSummary () {
   std::cout << "Number of remaining objects: " << NumberOfBodies << std::endl;
   std::cout << "Position of first remaining object: "
             << x[0][0] << ", " << x[0][1] << ", " << x[0][2] << std::endl;
-}
-
-
-/// Convergence
-
-void NBodySimulation::initAnalyticalSolution() {
-  // Only initialize if we're using analytical solution
-  if (!useAnalytical) return;
-  
-  // Allocate memory for analytical solution if not already done
-  if (x_analytical == nullptr) {
-    x_analytical = new double*[NumberOfBodies];
-    v_analytical = new double*[NumberOfBodies];
-    for (int i = 0; i < NumberOfBodies; i++) {
-      x_analytical[i] = new double[3];
-      v_analytical[i] = new double[3];
-      
-      // Store initial values
-      for (int d = 0; d < 3; d++) {
-        x_analytical[i][d] = x[i][d];
-        v_analytical[i][d] = v[i][d];
-      }
-    }
-  }
-}
-
-void NBodySimulation::updateAnalyticalSolution(double time) {
-  if (!useAnalytical || x_analytical == nullptr) return;
-  
-  // For simple test case with one or two particles with constant velocity
-  // We can use x(t) = x₀ + v₀*t for each particle independently
-  if (NumberOfBodies <= 2) {
-    for (int i = 0; i < NumberOfBodies; i++) {
-      for (int d = 0; d < 3; d++) {
-        // Use initial position and velocity
-        x_analytical[i][d] = x_analytical[i][d] + v_analytical[i][d] * timeStepSize;
-      }
-    }
-  }
-  
-  // For grid setup with particles initially at rest (no-noise scenario)
-  // We can still use constant velocity if no forces are acting
-  else if (maxV < 1e-10) { // Particles initially at rest
-    for (int i = 0; i < NumberOfBodies; i++) {
-      for (int d = 0; d < 3; d++) {
-        // Since initial velocity is zero, position doesn't change
-        // But update anyway based on current analytical velocity
-        x_analytical[i][d] = x_analytical[i][d] + v_analytical[i][d] * timeStepSize;
-      }
-    }
-  }
-  
-  // If we have gravitational forces, we need to update velocities too
-  // This is a simple Euler step for the analytical solution using the exact same
-  // force calculation as the main simulation
-  else {
-    // Calculate forces for the analytical solution
-    double* force0 = new double[NumberOfBodies]();
-    double* force1 = new double[NumberOfBodies]();
-    double* force2 = new double[NumberOfBodies]();
-    
-    for (int i = 0; i < NumberOfBodies; i++) {
-      force0[i] = 0.0;
-      force1[i] = 0.0;
-      force2[i] = 0.0;
-    }
-    
-    // We use a very small time step for the analytical solution
-    double analytical_dt = timeStepSize / 100.0;
-    
-    // Do 100 small steps to get a more accurate analytical solution
-    for (int step = 0; step < 100; step++) {
-      // Calculate forces between particles
-      for (int i = 0; i < NumberOfBodies; i++) {
-        for (int j = i+1; j < NumberOfBodies; j++) {
-          if (i != j) {
-            // Calculate distance between particles
-            double distance = sqrt(
-              (x_analytical[j][0]-x_analytical[i][0]) * (x_analytical[j][0]-x_analytical[i][0]) +
-              (x_analytical[j][1]-x_analytical[i][1]) * (x_analytical[j][1]-x_analytical[i][1]) +
-              (x_analytical[j][2]-x_analytical[i][2]) * (x_analytical[j][2]-x_analytical[i][2])
-            );
-            double distance3 = distance * distance * distance;
-            
-            if (distance3 < 1e-10) continue; // Avoid division by zero
-            
-            // Calculate force components
-            force0[i] += (x_analytical[j][0]-x_analytical[i][0]) * mass[i]*mass[j] / distance3;
-            force1[i] += (x_analytical[j][1]-x_analytical[i][1]) * mass[i]*mass[j] / distance3;
-            force2[i] += (x_analytical[j][2]-x_analytical[i][2]) * mass[i]*mass[j] / distance3;
-            
-            force0[j] -= (x_analytical[j][0]-x_analytical[i][0]) * mass[i]*mass[j] / distance3;
-            force1[j] -= (x_analytical[j][1]-x_analytical[i][1]) * mass[i]*mass[j] / distance3;
-            force2[j] -= (x_analytical[j][2]-x_analytical[i][2]) * mass[i]*mass[j] / distance3;
-          }
-        }
-      }
-      
-      // Update positions using current velocities
-      for (int i = 0; i < NumberOfBodies; i++) {
-        x_analytical[i][0] += v_analytical[i][0] * analytical_dt;
-        x_analytical[i][1] += v_analytical[i][1] * analytical_dt;
-        x_analytical[i][2] += v_analytical[i][2] * analytical_dt;
-      }
-      
-      // Update velocities using calculated forces
-      for (int i = 0; i < NumberOfBodies; i++) {
-        v_analytical[i][0] += force0[i] / mass[i] * analytical_dt;
-        v_analytical[i][1] += force1[i] / mass[i] * analytical_dt;
-        v_analytical[i][2] += force2[i] / mass[i] * analytical_dt;
-      }
-      
-      // Reset forces for next step
-      for (int i = 0; i < NumberOfBodies; i++) {
-        force0[i] = 0.0;
-        force1[i] = 0.0;
-        force2[i] = 0.0;
-      }
-    }
-    
-    delete[] force0;
-    delete[] force1;
-    delete[] force2;
-  }
-}
-
-double NBodySimulation::calculateError() {
-  if (!useAnalytical) {
-    return -1.0; // Error calculation not available
-  }
-  
-  if (x_analytical == nullptr) {
-    initAnalyticalSolution();
-    return 0.0; // No error on first step
-  }
-  
-  double totalError = 0.0;
-  for (int i = 0; i < NumberOfBodies; i++) {
-    double bodyError = 0.0;
-    for (int d = 0; d < 3; d++) {
-      double diff = x[i][d] - x_analytical[i][d];
-      bodyError += diff * diff;
-    }
-    totalError += sqrt(bodyError);
-  }
-  
-  // Return average error across all bodies
-  return totalError / NumberOfBodies;
-}
-
-void NBodySimulation::printConvergenceData() {
-  double error = -1.0;
-  
-  if (useAnalytical) {
-    error = calculateError();
-  }
-  
-  std::cout << "\n======= CONVERGENCE ANALYSIS =======" << std::endl;
-  std::cout << "Time step size: " << timeStepSize << std::endl;
-  std::cout << "Final time: " << t << std::endl;
-  std::cout << "Number of time steps: " << timeStepCounter << std::endl;
-  
-  if (useAnalytical) {
-    std::cout << "Error (L2 norm): " << error << std::endl;
-  } else {
-    std::cout << "Analytical error calculation unavailable" << std::endl;
-    std::cout << "For convergence testing, run multiple simulations with" << std::endl;
-    std::cout << "different time steps and compare final positions" << std::endl;
-  }
-  
-  std::cout << "===================================" << std::endl;
-  
-  // Write to CSV file for easy plotting
-  static bool fileHeaderWritten = false;
-  std::ofstream outFile;
-  
-  if (!fileHeaderWritten) {
-    outFile.open("convergence_data.csv");
-    outFile << "TimeStepSize,Error,NumberOfSteps,FinalTime,NumberOfBodies" << std::endl;
-    fileHeaderWritten = true;
-  } else {
-    outFile.open("convergence_data.csv", std::ios::app);
-  }
-  
-  outFile << timeStepSize << "," << error << "," << timeStepCounter << "," << t << "," << NumberOfBodies << std::endl;
-  outFile.close();
-  
-  // Write final positions to a separate file for comparison
-  std::string posFileName = "positions_dt_" + std::to_string(timeStepSize) + ".csv";
-  std::ofstream posFile(posFileName);
-  posFile << "ParticleID,X,Y,Z" << std::endl;
-  
-  for (int i = 0; i < NumberOfBodies; i++) {
-    posFile << i << "," << x[i][0] << "," << x[i][1] << "," << x[i][2] << std::endl;
-  }
-  
-  posFile.close();
-  std::cout << "Final positions written to " << posFileName << std::endl;
 }
