@@ -27,6 +27,7 @@ int main (int argc, char** argv) {
 
   // Code that initialises and runs the simulation.
   NBodySimulation nbs;
+  nbs.findStableTimeStep();
   nbs.setUp(argc,argv);
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
@@ -41,3 +42,4 @@ int main (int argc, char** argv) {
 
   return 0;
 }
+

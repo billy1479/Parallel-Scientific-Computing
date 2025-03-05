@@ -173,6 +173,15 @@ void NBodySimulation::updateBody () {
 
 	  maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
    }
+
+  double maxMass = *std::max(mass, mass + NumberOfBodies);
+  double stableTimeStep = 0.01 * std::sqrt((minDx * minDx * minDx) / (1.0 * maxMass)); // 1.0 represents G the gravitational constant
+  stableTimeStep = std::min(stableTimeStep, minDx / maxV * 0.1); // Additional safety factor
+
+  // std::cout << "Timestep changed to: " << std::min(timeStepSize, stableTimeStep) << std::endl;
+
+  timeStepSize = std::min(timeStepSize, stableTimeStep);
+
    t += timeStepSize;
 
   delete[] force0;

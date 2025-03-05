@@ -4,11 +4,10 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
-#include <vector> 
 
 class NBodySimulation {
 
- protected:
+ private:
   double t;
   double tFinal;
   double tPlot;
@@ -26,7 +25,6 @@ class NBodySimulation {
    * Equivalent to x storing the velocities.
    */
   double** v;
-  
 
   /**
    * One mass entry per molecule/particle.
@@ -48,9 +46,6 @@ class NBodySimulation {
    */
   double minDx;
 
-    /** Current system energy */
-  double currentEnergy;
-
   /**
    * Stream for video output file.
    */
@@ -61,17 +56,6 @@ class NBodySimulation {
    */
   int snapshotCounter;
   int timeStepCounter;
-
-  // Time step analysis storage
-  struct TimeStepMetrics {
-    double timeStep;
-    double energyError;
-    double time;
-  };
-  std::vector<TimeStepMetrics> timeStepHistory;
-  double initialEnergy;
-
-  // Time step analysis storage
 
 
  public:
@@ -106,11 +90,6 @@ class NBodySimulation {
    * Implement timestepping scheme and force updates.
    */
   void updateBody ();
-  double calculateTotalEnergy();
-  void findOptimalTimeStep(double initialGuess);
-  void adaptiveTimeStep();
-  void printEnergySummary();
-  void calculateStableTimeStep();
 
   /**
    * Check if the last time step has been reached (simulation is completed).
