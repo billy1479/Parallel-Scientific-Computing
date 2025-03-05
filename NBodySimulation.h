@@ -8,6 +8,60 @@
 class NBodySimulation {
 
  private:
+  // double t;
+  // double tFinal;
+  // double tPlot;
+  // double tPlotDelta;
+
+  // int NumberOfBodies;
+
+  // /**
+  //  * Pointer to pointers. Each pointer in turn points to three coordinates, i.e.
+  //  * each pointer represents one molecule/particle/body.
+  //  */
+  // double** x;
+
+  // /**
+  //  * Equivalent to x storing the velocities.
+  //  */
+  // double** v;
+
+  // /**
+  //  * One mass entry per molecule/particle.
+  //  */
+  // double*  mass;
+
+  // /**
+  //  * Global time step size used.
+  //  */
+  // double timeStepSize;
+
+  // /**
+  //  * Maximum velocity of all particles.
+  //  */
+  // double maxV;
+
+  // /**
+  //  * Minimum distance between two elements.
+  //  */
+  // double minDx;
+
+  // /**
+  //  * Stream for video output file.
+  //  */
+  // std::ofstream videoFile;
+
+  // /**
+  //  * Output counters.
+  //  */
+  // int snapshotCounter;
+  // int timeStepCounter;
+
+
+ public:
+  NBodySimulation ();
+  ~NBodySimulation ();
+
   double t;
   double tFinal;
   double tPlot;
@@ -56,11 +110,6 @@ class NBodySimulation {
    */
   int snapshotCounter;
   int timeStepCounter;
-
-
- public:
-  NBodySimulation ();
-  ~NBodySimulation ();
 
   /**
    * Check that the number command line parameters is correct.
