@@ -1,11 +1,19 @@
 #include <cmath>
-
 #include <fstream>
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include "OctreeNode.h"
 
 class NBodySimulation {
+  private:
+    // Barns Hut
+    double domainSize;
+    OctreeNode* octree;
+
+      // Octree node helper functions
+    void buildOctree();
+    double findDomainSize();
 
  public:
   double t;
@@ -56,6 +64,9 @@ class NBodySimulation {
    */
   int snapshotCounter;
   int timeStepCounter;
+
+
+  
 
   NBodySimulation ();
   ~NBodySimulation ();
@@ -122,5 +133,7 @@ class NBodySimulation {
    */
   void printSnapshotSummary ();
   void printSummary ();
+
+
 
 };

@@ -49,7 +49,7 @@
 
 int main(int argc, char** argv) {
     // Define different time steps for testing
-    std::vector<double> dt_values = {0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125, 0.00390625, 0.001953125, 0.0009765625, 0.00048828125, 0.000244140625};  // Different time steps
+    std::vector<double> dt_values = {0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125, 0.00390625, 0.001953125, 0.0009765625, 0.00048828125, 0.000244140625, 0.0001220703125, 0.00006103515625};  // Different time steps
     std::vector<double> errors;
     
     // Run a reference simulation with a very small dt
