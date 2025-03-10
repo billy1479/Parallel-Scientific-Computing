@@ -1,30 +1,6 @@
 // OctreeNode.cpp
 #include "OctreeNode.h"
 
-// Define the static THETA constant
-const double OctreeNode::THETA = 0.5;
-
-OctreeNode::OctreeNode(double cx, double cy, double cz, double hw) :
-    centerX(cx), centerY(cy), centerZ(cz), halfWidth(hw),
-    totalMass(0.0), centerOfMassX(0.0), centerOfMassY(0.0), centerOfMassZ(0.0),
-    isInternal(false) {
-    
-    // Initialize children pointers to null
-    for (int i = 0; i < 8; i++) {
-        children[i] = nullptr;
-    }
-}
-
-OctreeNode::~OctreeNode() {
-    // Clean up children
-    for (int i = 0; i < 8; i++) {
-        if (children[i] != nullptr) {
-            delete children[i];
-            children[i] = nullptr;
-        }
-    }
-}
-
 void OctreeNode::insert(int bodyIdx, double** x, double* mass) {
     // If this node doesn't contain any bodies yet
     if (totalMass == 0.0) {
@@ -53,7 +29,7 @@ void OctreeNode::insert(int bodyIdx, double** x, double* mass) {
         double newCenterY = centerY + (octant & 2 ? newHalfWidth : -newHalfWidth);
         double newCenterZ = centerZ + (octant & 4 ? newHalfWidth : -newHalfWidth);
         
-        children[octant] = new OctreeNode(newCenterX, newCenterY, newCenterZ, newHalfWidth);
+        children[octant] = std::make_unique<OctreeNode>(newCenterX, newCenterY, newCenterZ, newHalfWidth);
         children[octant]->insert(existingBodyIdx, x, mass);
     }
 
@@ -63,13 +39,13 @@ void OctreeNode::insert(int bodyIdx, double** x, double* mass) {
         int octant = getOctant(x[bodyIdx][0], x[bodyIdx][1], x[bodyIdx][2]);
         
         // Create the octant if it doesn't exist
-        if (children[octant] == nullptr) {
+        if (!children[octant]) {
             double newHalfWidth = halfWidth / 2.0;
             double newCenterX = centerX + (octant & 1 ? newHalfWidth : -newHalfWidth);
             double newCenterY = centerY + (octant & 2 ? newHalfWidth : -newHalfWidth);
             double newCenterZ = centerZ + (octant & 4 ? newHalfWidth : -newHalfWidth);
             
-            children[octant] = new OctreeNode(newCenterX, newCenterY, newCenterZ, newHalfWidth);
+            children[octant] = std::make_unique<OctreeNode>(newCenterX, newCenterY, newCenterZ, newHalfWidth);
         }
         
         // Insert the body into the appropriate octant
@@ -104,7 +80,7 @@ void OctreeNode::updateCenterOfMass(double** x, double* mass) {
     // For internal nodes
     else {
         for (int i = 0; i < 8; i++) {
-            if (children[i] != nullptr) {
+            if (children[i]) {
                 totalMass += children[i]->totalMass;
                 centerOfMassX += children[i]->totalMass * children[i]->centerOfMassX;
                 centerOfMassY += children[i]->totalMass * children[i]->centerOfMassY;
@@ -149,7 +125,7 @@ void OctreeNode::computeForce(int bodyIdx, double** x, double* force, double* ma
     // Otherwise, recursively compute forces from children
     else {
         for (int i = 0; i < 8; i++) {
-            if (children[i] != nullptr) {
+            if (children[i]) {
                 children[i]->computeForce(bodyIdx, x, force, mass);
             }
         }
