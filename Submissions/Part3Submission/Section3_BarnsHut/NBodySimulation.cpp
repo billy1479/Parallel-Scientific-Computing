@@ -279,6 +279,7 @@ void NBodySimulation::updateBody() {
       delete[] force0;
       delete[] force1;
       delete[] force2;
+      delete[] force2;
       
       std::cout << "Finished updateBody()" << std::endl;
   } catch (std::exception& e) {
