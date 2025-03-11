@@ -27,7 +27,7 @@ public:
     NBodySimulation::setUp(argc, argv);
     
     // Initialize the collision constant C = 10^(-2)/N
-    collisionConstant = 0.01 / NumberOfBodies;
+    collisionConstant = 0.0001 / NumberOfBodies;
     
     // Initialize the merged array
     merged = new bool[NumberOfBodies]();  // Initialize all to false

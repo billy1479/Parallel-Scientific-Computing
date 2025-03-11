@@ -1,7 +1,7 @@
 #include "OctreeNode.h"
 
 // Define the static constants
-const double OctreeNode::THETA = 0.5;
+const double OctreeNode::THETA = 0.2;
 const double OctreeNode::MIN_SIZE = 1e-6;  // Prevents infinite subdivision
 
 OctreeNode::OctreeNode(double cx, double cy, double cz, double hw, int d) :
