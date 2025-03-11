@@ -140,7 +140,7 @@ void NBodySimulation::updateBody () {
 
   if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
 
-  for (int i=0; i<NumberOfBodies; i++) {
+  for (int i=0; i<NumberOfBodies; i++) { 
           force0[i] = 0.0;
           force1[i] = 0.0;
           force2[i] = 0.0;
