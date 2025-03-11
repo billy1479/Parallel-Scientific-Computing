@@ -5,7 +5,7 @@ NBodySimulation::NBodySimulation () :
   t(0), tFinal(0), tPlot(0), tPlotDelta(0), NumberOfBodies(0),
   x(nullptr), v(nullptr), mass(nullptr),
   timeStepSize(0), maxV(0), minDx(0), videoFile(nullptr),
-  snapshotCounter(0), timeStepCounter(0) {};
+  snapshotCounter(0), timeStepCounter(0), octree(nullptr), domainSize(0.0) {};
 
 NBodySimulation::~NBodySimulation () {
   if (x != nullptr) {
@@ -111,75 +111,6 @@ void NBodySimulation::setUp (int argc, char** argv) {
     tPlot = 0.0;
   }
 }
-
-
-double NBodySimulation::force_calculation (int i, int j, int direction){
-  // Euclidean distance
-  const double distance = sqrt(
-                               (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
-                               (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
-                               (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
-                               );
-  const double distance3 = distance * distance * distance;
-  minDx = std::min( minDx,distance );
-
-  return (x[j][direction]-x[i][direction]) * mass[i]*mass[j] / distance3;
-}
-
-// void NBodySimulation::updateBody () {
-
-//   timeStepCounter++;
-//   maxV   = 0.0;
-//   minDx  = std::numeric_limits<double>::max();
-
-//   // force0 = force along x direction
-//   // force1 = force along y direction
-//   // force2 = force along z direction
-//   double* force0 = new double[NumberOfBodies]();
-//   double* force1 = new double[NumberOfBodies]();
-//   double* force2 = new double[NumberOfBodies]();
-
-//   if (NumberOfBodies == 1) minDx = 0;  // No distances to calculate
-
-//   for (int i=0; i<NumberOfBodies; i++) {
-//           force0[i] = 0.0;
-//           force1[i] = 0.0;
-//           force2[i] = 0.0;
-//   }   
-
-//   for (int i=0; i<NumberOfBodies; i++) {
-// 	  for (int j=i+1; j<NumberOfBodies; j++) {
-// 		  if(i!=j){
-// 			  // x,y,z forces acting on particle i.
-// 			  force0[i] += force_calculation(i,j,0);
-// 			  force1[i] += force_calculation(i,j,1);
-// 			  force2[i] += force_calculation(i,j,2);
-// 			   // x,y,z symmetric forces acting on particle j.
-// 			  force0[j] -= force_calculation(i,j,0);
-// 			  force1[j] -= force_calculation(i,j,1);
-// 			  force2[j] -= force_calculation(i,j,2);
-
-// 		  }
-// 	  }
-//   }
-//   for (int i=0; i < NumberOfBodies; i++){
-// 	  x[i][0] = x[i][0] + timeStepSize * v[i][0];
-// 	  x[i][1] = x[i][1] + timeStepSize * v[i][1];
-// 	  x[i][2] = x[i][2] + timeStepSize * v[i][2];
-//   }
-//   for (int i=0; i < NumberOfBodies; i++){
-// 	  v[i][0] = v[i][0] + timeStepSize * force0[i] / mass[i];
-// 	  v[i][1] = v[i][1] + timeStepSize * force1[i] / mass[i];
-// 	  v[i][2] = v[i][2] + timeStepSize * force2[i] / mass[i];
-
-// 	  maxV = std::max(maxV, std::sqrt( v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2] ));
-//    }
-//    t += timeStepSize;
-
-//   delete[] force0;
-//   delete[] force1;
-//   delete[] force2;
-// }
 
 void NBodySimulation::updateBody() {
   try {
@@ -375,6 +306,19 @@ void NBodySimulation::printSummary () {
             << x[0][0] << ", " << x[0][1] << ", " << x[0][2] << std::endl;
 }
 
+double NBodySimulation::force_calculation (int i, int j, int direction){
+  // Euclidean distance
+  const double distance = sqrt(
+                               (x[j][0]-x[i][0]) * (x[j][0]-x[i][0]) +
+                               (x[j][1]-x[i][1]) * (x[j][1]-x[i][1]) +
+                               (x[j][2]-x[i][2]) * (x[j][2]-x[i][2])
+                               );
+  const double distance3 = distance * distance * distance;
+  minDx = std::min( minDx,distance );
+
+  return (x[j][direction]-x[i][direction]) * mass[i]*mass[j] / distance3;
+}
+
 // Barns hut
 
 void NBodySimulation::buildOctree() {
@@ -389,10 +333,13 @@ void NBodySimulation::buildOctree() {
       }
       
       // Make sure we have a valid domain size
-      if (domainSize <= 0.0) {
-          domainSize = findDomainSize();
-          std::cout << "Recalculated domain size: " << domainSize << std::endl;
-      }
+      // if (domainSize <= 0.0) {
+      //     domainSize = findDomainSize();
+      //     std::cout << "Recalculated domain size: " << domainSize << std::endl;
+      // }
+
+      domainSize = findDomainSize();
+      std::cout << "Recalculated domain size: " << domainSize << std::endl;
       
       // Create new octree
       std::cout << "Creating new octree with domainSize = " << domainSize << std::endl;
@@ -433,34 +380,65 @@ void NBodySimulation::buildOctree() {
   }
 }
 
+// double NBodySimulation::findDomainSize() {
+//   try {
+//       // Start with a reasonable minimum size
+//       double maxCoord = 1.0;
+      
+//       // Find maximum absolute coordinate
+//       for (int i = 0; i < NumberOfBodies; i++) {
+//           for (int d = 0; d < 3; d++) {
+//               if (std::isnan(x[i][d]) || std::isinf(x[i][d])) {
+//                   std::cerr << "Warning: Invalid coordinate for body " << i 
+//                             << " at dimension " << d << ": " << x[i][d] << std::endl;
+//                   continue;
+//               }
+//               maxCoord = std::max(maxCoord, std::abs(x[i][d]));
+//           }
+//       }
+      
+//       // Add margin and ensure power of 2
+//       double size = maxCoord * 2.0 * 1.2;  // 20% extra margin
+      
+//       // Round up to power of 2
+//       double power = std::ceil(std::log2(size));
+//       return std::pow(2.0, power);
+//   } catch (std::exception& e) {
+//       std::cerr << "Exception in findDomainSize: " << e.what() << std::endl;
+//       return 1000.0;  // Default to a large size in case of error
+//   } catch (...) {
+//       std::cerr << "Unknown exception in findDomainSize" << std::endl;
+//       return 1000.0;
+//   }
+// }
 double NBodySimulation::findDomainSize() {
   try {
-      // Start with a reasonable minimum size
+      // Start with a reasonable default size
       double maxCoord = 1.0;
       
-      // Find maximum absolute coordinate
+      // Find maximum absolute coordinate among all particles
       for (int i = 0; i < NumberOfBodies; i++) {
           for (int d = 0; d < 3; d++) {
               if (std::isnan(x[i][d]) || std::isinf(x[i][d])) {
-                  std::cerr << "Warning: Invalid coordinate for body " << i 
-                            << " at dimension " << d << ": " << x[i][d] << std::endl;
-                  continue;
+                  continue;  // Skip invalid coordinates
               }
               maxCoord = std::max(maxCoord, std::abs(x[i][d]));
           }
       }
       
-      // Add margin and ensure power of 2
-      double size = maxCoord * 2.0 * 1.2;  // 20% extra margin
+      // Add margin and ensure it's reasonable (between 1.0 and 1000.0)
+      double size = maxCoord * 2.0 * 1.2;  // 2x for diameter, 20% margin
       
-      // Round up to power of 2
+      // Limit to reasonable size
+      size = std::max(1.0, std::min(size, 1000.0));
+      
+      std::cout << "Found domain size based on particles: " << size << std::endl;
+      
+      // Round up to power of 2 if desired
       double power = std::ceil(std::log2(size));
       return std::pow(2.0, power);
   } catch (std::exception& e) {
       std::cerr << "Exception in findDomainSize: " << e.what() << std::endl;
-      return 1000.0;  // Default to a large size in case of error
-  } catch (...) {
-      std::cerr << "Unknown exception in findDomainSize" << std::endl;
-      return 1000.0;
+      return 100.0;  // Reasonable default
   }
 }

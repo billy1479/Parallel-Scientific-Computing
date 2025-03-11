@@ -17,15 +17,21 @@ OctreeNode::OctreeNode(double cx, double cy, double cz, double hw, int d) :
 }
 
 OctreeNode::~OctreeNode() {
-    // Clean up children
+    // Safe deletion of children
     for (int i = 0; i < 8; i++) {
         if (children[i] != nullptr) {
-            delete children[i];
-            children[i] = nullptr;
+            try {
+                OctreeNode* temp = children[i];
+                children[i] = nullptr;  // Clear pointer before deletion to avoid cyclic issues
+                delete temp;
+            } catch (std::exception& e) {
+                std::cerr << "Exception while deleting child " << i << ": " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "Unknown exception while deleting child " << i << std::endl;
+            }
         }
     }
 }
-
 int OctreeNode::getOctant(double posX, double posY, double posZ) {
     // Handle numerical precision issues near boundaries
     double epsilon = 1e-10;
