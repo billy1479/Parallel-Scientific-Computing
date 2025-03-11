@@ -3,10 +3,10 @@
 #include "NBodySimulation.h"
 
 /**
- * You can compile this file with
- *   make step-0
- * and run it with
- *   ./step-0
+ * You must add a target to the Makefile that compiles this file with
+ *   make step-5-gpu
+ * which will enable you to run it with
+ *   ./step-5-gpu
  *
  * Results will be added to the `paraview-output` directory. In it you will find
  * a result.pvd file that you can open with ParaView. To see the points you will
@@ -26,23 +26,18 @@ int main (int argc, char** argv) {
   std::cout << std::setprecision(15);
 
   // Code that initialises and runs the simulation.
-  NBodySimulation nbs;
+  NBodySimulationGPU nbs;
   nbs.setUp(argc,argv);
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
-
-  nbs.calculateTotalEnergy(true);
 
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();
   }
 
-  nbs.calculateTotalEnergy(false);
-
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
 
   return 0;
 }
-

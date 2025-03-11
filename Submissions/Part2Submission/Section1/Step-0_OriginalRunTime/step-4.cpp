@@ -4,9 +4,9 @@
 
 /**
  * You can compile this file with
- *   make step-0
+ *   make step-4
  * and run it with
- *   ./step-0
+ *   ./step-4
  *
  * Results will be added to the `paraview-output` directory. In it you will find
  * a result.pvd file that you can open with ParaView. To see the points you will
@@ -31,18 +31,13 @@ int main (int argc, char** argv) {
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
 
-  nbs.calculateTotalEnergy(true);
-
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();
   }
-
-  nbs.calculateTotalEnergy(false);
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();
 
   return 0;
 }
-

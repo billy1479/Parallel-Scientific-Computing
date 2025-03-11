@@ -31,14 +31,10 @@ int main (int argc, char** argv) {
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
 
-  nbs.calculateTotalEnergy(true);
-
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();
   }
-
-  nbs.calculateTotalEnergy(false);
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();

@@ -272,13 +272,14 @@ void NBodySimulation::updateBody() {
           minDx = 0.0;  // No distances to calculate for a single body
       }
 
+      std::cout << "Finished calculating forces" << std::endl;
+
       // Update time
       t += timeStepSize;
       
       // Clean up
       delete[] force0;
       delete[] force1;
-      delete[] force2;
       delete[] force2;
       
       std::cout << "Finished updateBody()" << std::endl;

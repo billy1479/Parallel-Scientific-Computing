@@ -125,6 +125,4 @@ class NBodySimulation {
   void printSnapshotSummary ();
   void printSummary ();
 
-  double calculateTotalEnergy(bool mode);
-
 };
