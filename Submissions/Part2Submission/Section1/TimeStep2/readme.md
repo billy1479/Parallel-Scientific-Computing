@@ -1,0 +1,1 @@
+python3 create_initial_conditions.py --final-time 600 --snapshots 50 --executable-name  ./step-0 --min-mass 1000 --max-mass 1000000 --dt 0.001 --N 5

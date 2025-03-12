@@ -31,13 +31,13 @@ class TimeStepEnergyTester:
     
     def run_test_series(self, 
                         python_script="create_initial_conditions.py",
-                        N=5,
-                        min_mass=1.0,
+                        N=10,
+                        min_mass=1000.0,
                         max_mass=1000000.0,
-                        start_dt=0.0001,
-                        end_dt=2,
-                        dt_increment=0.001,
-                        final_time=60.0,
+                        start_dt=0.001,
+                        end_dt=1,
+                        dt_increment=0.0001,
+                        final_time=600.0,
                         executable_name="./step-0",
                         output_dir="TimeStepTest",
                         result_file="timestep_results.csv"):
@@ -51,7 +51,7 @@ class TimeStepEnergyTester:
             max_mass: Maximum mass for bodies
             start_dt: Starting time step size
             end_dt: Ending time step size
-            dt_increment: Increment for time step between tests
+            dt_increment: Increment for time step between testss
             final_time: Final simulation time
             executable_name: Name of the executable to use
             output_dir: Directory to store all outputs
@@ -380,9 +380,9 @@ if __name__ == "__main__":
     parser.add_argument("--min-mass", type=float, default=1.0, help="Minimum body mass")
     parser.add_argument("--max-mass", type=float, default=1000000.0, help="Maximum body mass")
     parser.add_argument("--start-dt", type=float, default=0.001, help="Starting time step")
-    parser.add_argument("--end-dt", type=float, default=2, help="Ending time step")
+    parser.add_argument("--end-dt", type=float, default=1, help="Ending time step")
     parser.add_argument("--dt-increment", type=float, default=0.001, help="Time step increment")
-    parser.add_argument("--final-time", type=float, default=10.0, help="Final simulation time")
+    parser.add_argument("--final-time", type=float, default=600.0, help="Final simulation time")
     parser.add_argument("--executable", default="./step-0", help="Executable name")
     parser.add_argument("--output", default="TimeStepTest", help="Output directory")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")

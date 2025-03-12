@@ -10,15 +10,17 @@ step-%: step-%
 # On Hamilton, the default version of this compiler is 8.5.0.
 # If can load a more recent version with
 #     $ module load gcc/12.2
-step-% step-%.o NBodySimulation.o: CXX?=g++
-step-% step-%.o NBodySimulation.o: CXXFLAGS?=-fopenmp -O3 -march=native -std=c++0x -fno-math-errno
+step-% step-%.o NBodySimulation.o OctreeNode.o: CXX?=g++
+step-% step-%.o NBodySimulation.o OctreeNode.o: CXXFLAGS?=-fopenmp -O3 -march=native -std=c++0x -fno-math-errno
 NBodySimulation.o: NBodySimulation.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+OctreeNode.o: OctreeNode.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 step-%.o: step-%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 NBodySimulationVectorised.o: NBodySimulationVectorised.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-step-%: NBodySimulationVectorised.o NBodySimulation.o step-%.o
+step-%: NBodySimulationVectorised.o NBodySimulation.o OctreeNode.o step-%.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 .silent: cleanall clean clean_paraview

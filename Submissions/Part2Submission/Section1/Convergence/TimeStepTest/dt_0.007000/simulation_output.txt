@@ -1,0 +1,58 @@
+created setup with 125 bodies
+plotting switched off
+plot next snapshot,	 time step=11,	 t=11,	 dt=1,	 v_max=7.4183e+08,	 dx_min=1.0478e+08
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.5 is 3.43097e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.25 is 5.216e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.125 is 6.1259e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.0625 is 6.58519e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.03125 is 6.81593e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.015625 is 6.93157e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.0078125 is 6.98946e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.00390625 is 7.01842e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.00195312 is 7.0329e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.000976562 is 7.04014e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.000488281 is 7.04377e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.000244141 is 7.04558e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=0.00012207 is 7.04649e+09
+created setup with 125 bodies
+plotting switched off
+Error for dt=6.10352e-05 is 7.04696e+09
+Convergence order between dt=0.5 and dt=0.25 is -0.604328
+Convergence order between dt=0.25 and dt=0.125 is -0.231978
+Convergence order between dt=0.125 and dt=0.0625 is -0.104305
+Convergence order between dt=0.0625 and dt=0.03125 is -0.0496844
+Convergence order between dt=0.03125 and dt=0.015625 is -0.0242715
+Convergence order between dt=0.015625 and dt=0.0078125 is -0.0119983
+Convergence order between dt=0.0078125 and dt=0.00390625 is -0.00596545
+Convergence order between dt=0.00390625 and dt=0.00195312 is -0.00297437
+Convergence order between dt=0.00195312 and dt=0.000976562 is -0.00148511
+Convergence order between dt=0.000976562 and dt=0.000488281 is -0.000742043
+Convergence order between dt=0.000488281 and dt=0.000244141 is -0.00037096
+Convergence order between dt=0.000244141 and dt=0.00012207 is -0.000186008
+Convergence order between dt=0.00012207 and dt=6.10352e-05 is -9.78936e-05

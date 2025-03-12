@@ -192,7 +192,7 @@ class NBodyScalingTester:
             
             plt.xlabel('Number of Bodies (N)')
             plt.ylabel('Execution Time (seconds)')
-            plt.title('Execution Time Comparison: step-0 vs step-4')
+            plt.title('Execution Time Comparison: step-0 vs step-2')
             plt.grid(True)
             plt.legend()
             plt.savefig(f"{output_dir}/execution_time_comparison.png", dpi=300)
@@ -219,7 +219,7 @@ class NBodyScalingTester:
             
             plt.xlabel('Number of Bodies (N)')
             plt.ylabel('Execution Time (seconds)')
-            plt.title('Execution Time Comparison: step-0 vs step-4')
+            plt.title('Execution Time Comparison: step-0 vs step-2')
             plt.xticks(index + bar_width/2, N_values)
             plt.legend()
             plt.savefig(f"{output_dir}/execution_time_bar_comparison.png", dpi=300)
@@ -240,8 +240,8 @@ class NBodyScalingTester:
                 if speedups:
                     plt.plot(valid_n_values, speedups, 'go-', label='Speedup ratio')
                 plt.xlabel('Number of Bodies (N)')
-                plt.ylabel('Speedup (step-0 time / step-4 time)')
-                plt.title('Performance Speedup: step-0 vs step-4')
+                plt.ylabel('Speedup (step-0 time / step-2 time)')
+                plt.title('Performance Speedup: step-0 vs step-2')
                 plt.grid(True)
                 plt.legend()
                 plt.savefig(f"{output_dir}/speedup_ratio.png", dpi=300)

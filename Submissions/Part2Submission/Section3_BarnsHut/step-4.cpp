@@ -1,5 +1,4 @@
 #include <iomanip>
-
 #include "NBodySimulation.h"
 
 /**
@@ -13,6 +12,9 @@
  * need to look a the properties of result.pvd and select the representation
  * "Point Gaussian". Pressing play will play your time steps.
  */
+class NBodyBarnsHutSimulation : public NBodySimulation {
+
+};
 
 /**
  * Main routine.
@@ -26,7 +28,7 @@ int main (int argc, char** argv) {
   std::cout << std::setprecision(15);
 
   // Code that initialises and runs the simulation.
-  NBodySimulation nbs;
+  NBodyBarnsHutSimulation nbs;
   nbs.setUp(argc,argv);
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();

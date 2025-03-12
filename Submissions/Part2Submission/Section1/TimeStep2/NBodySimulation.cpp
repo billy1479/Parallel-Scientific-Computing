@@ -265,7 +265,7 @@ void NBodySimulation::printSummary () {
             << x[0][0] << ", " << x[0][1] << ", " << x[0][2] << std::endl;
 }
 
-// Total energy
+// Total energy calculation method
 
 double NBodySimulation::calculateTotalEnergy(bool mode) {
   // Calculate total energy as the sum of kinetic and potential energy
