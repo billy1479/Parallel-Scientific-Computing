@@ -104,39 +104,23 @@ class NBodySimulationMolecularForces : public NBodySimulation {
 
       if (NumberOfBodies == 1) minDx = 0;
 
-    for (int i = 0; i < NumberOfBodies; i++) {
-        for (int j = i + 1; j < NumberOfBodies; j++) {
-            // Calculate distance components once for all three dimensions
-            double dx = bodies[j].x - bodies[i].x;
-            double dy = bodies[j].y - bodies[i].y;
-            double dz = bodies[j].z - bodies[i].z;
-            
-            // Calculate squared distance
-            double distSqr = dx*dx + dy*dy + dz*dz;
-            double dist = std::sqrt(distSqr);
-            
-            // Update minimum distance
-            minDx = std::min(minDx, dist);
-            
-            // Calculate force magnitude once
-            double forceMagnitude = bodies[i].mass * bodies[j].mass / (dist * distSqr);
-            
-            // Calculate force components for all three dimensions at once
-            double fx = dx * forceMagnitude;
-            double fy = dy * forceMagnitude;
-            double fz = dz * forceMagnitude;
-            
-            // Apply forces to both bodies symmetrically (Newton's third law)
-            force0[i] += fx;
-            force1[i] += fy;
-            force2[i] += fz;
-            
-            // Apply equal and opposite forces to the other body
-            force0[j] -= fx;
-            force1[j] -= fy;
-            force2[j] -= fz;
-        }
-    }
+      for (int i = 0; i < NumberOfBodies; i++) {
+          for (int j = i + 1; j < NumberOfBodies; j++) {
+              if (i != j) {
+                  double f_0 = force_calculation(i, j, 0);
+                  double f_1 = force_calculation(i, j, 1);
+                  double f_2 = force_calculation(i, j, 2);
+
+                  force0[i] += f_0;
+                  force1[i] += f_1;
+                  force2[i] += f_2;
+
+                  force0[j] -= f_0;
+                  force1[j] -= f_1;
+                  force2[j] -= f_2;
+              }
+          }
+      }
 
       for (int i = 0; i < NumberOfBodies; i++) {
           bodies[i].x += timeStepSize * bodies[i].vx;
