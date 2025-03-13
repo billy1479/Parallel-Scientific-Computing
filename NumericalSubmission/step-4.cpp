@@ -19,13 +19,9 @@ struct alignas(64) Body {
   double padding;        // Maintain 64-byte alignment
 };
 
-/**
- * NBodySimulationCollision implements collision detection and merging
- * with the merge condition |x₁-x₂|≤C(m₁+m₂) where C=10⁻²/N
- */
 class NBodySimulationCollision {
 protected:
-  Body* bodies;           // Memory-aligned array of bodies
+  Body* bodies;           
   double t;
   double tFinal;
   double tPlot;

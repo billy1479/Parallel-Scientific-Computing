@@ -20,6 +20,52 @@ public:
       delete[] merged;
     }
   }
+
+  double calculateTotalEnergy(bool mode) {
+    // Calculate total energy as the sum of kinetic and potential energy
+    double totalEnergy = 0.0;
+    double kineticEnergy = 0.0;
+    double potentialEnergy = 0.0;
+    
+    // Calculate kinetic energy: sum of 0.5 * mass * velocity^2 for each body
+    for (int i = 0; i < NumberOfBodies; i++) {
+      // Calculate velocity magnitude squared (v^2 = vx^2 + vy^2 + vz^2)
+      double velocitySquared = 
+        v[i][0] * v[i][0] + 
+        v[i][1] * v[i][1] + 
+        v[i][2] * v[i][2];
+      
+      // Add kinetic energy contribution from this body
+      kineticEnergy += 0.5 * mass[i] * velocitySquared;
+    }
+    
+    // Calculate potential energy: sum of -G * m_i * m_j / r_ij for each unique pair
+    for (int i = 0; i < NumberOfBodies; i++) {
+      for (int j = i + 1; j < NumberOfBodies; j++) {
+        // Calculate Euclidean distance between bodies i and j
+        double distance = sqrt(
+          (x[j][0] - x[i][0]) * (x[j][0] - x[i][0]) +
+          (x[j][1] - x[i][1]) * (x[j][1] - x[i][1]) +
+          (x[j][2] - x[i][2]) * (x[j][2] - x[i][2])
+        );
+        
+        // Add potential energy contribution from this pair
+        // The negative sign is because gravitational potential energy is negative
+        potentialEnergy -= (mass[i] * mass[j]) / distance;
+      }
+    }
+    
+    // Total energy is the sum of kinetic and potential energy
+    totalEnergy = kineticEnergy + potentialEnergy;
+  
+    if (mode) {
+      std::cout << "Initial energy: " << totalEnergy << std::endl;
+    } else {
+      std::cout << "Final energy: " << totalEnergy << std::endl;
+    }
+  
+    return totalEnergy;
+  }
   
   // Override setUp to initialize collision parameters
   void setUp(int argc, char** argv) {
@@ -27,13 +73,13 @@ public:
     NBodySimulation::setUp(argc, argv);
     
     // Initialize the collision constant C = 10^(-2)/N
-    collisionConstant = 0.0001 / NumberOfBodies;
+    collisionConstant = 0.01 / NumberOfBodies;
     
     // Initialize the merged array
     merged = new bool[NumberOfBodies]();  // Initialize all to false
     
-    std::cout << "Collision simulation setup complete. Collision constant: " 
-              << collisionConstant << std::endl;
+    // std::cout << "Collision simulation setup complete. Collision constant: " 
+              // << collisionConstant << std::endl;
   }
   
   // Override updateBody to include collision detection and merging
@@ -136,9 +182,9 @@ private:
           // Mark body j as merged
           merged[j] = true;
 
-          std::cout << "Bodies " << i << " and " << j << " merged with new mass "
-                    << mass[i] << " at position ("
-                    << x[i][0] << ", " << x[i][1] << ", " << x[i][2] << ")" << std::endl;
+          // std::cout << "Bodies " << i << " and " << j << " merged with new mass "
+          //           << mass[i] << " at position ("
+          //           << x[i][0] << ", " << x[i][1] << ", " << x[i][2] << ")" << std::endl;
         }
       }
     }
@@ -164,8 +210,8 @@ private:
       int oldNumberOfBodies = NumberOfBodies;
       NumberOfBodies = newIndex;
 
-      std::cout << "After merging, number of bodies reduced from "
-                << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
+      // std::cout << "After merging, number of bodies reduced from "
+      //           << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
 
       // Reset the merged array for future use
       for (int i = 0; i < oldNumberOfBodies; i++) {
@@ -187,10 +233,14 @@ int main(int argc, char** argv) {
   nbs.openParaviewVideoFile();
   nbs.takeSnapshot();
 
+  nbs.calculateTotalEnergy(true);
+
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();
   }
+  
+  nbs.calculateTotalEnergy(false);
 
   nbs.printSummary();
   nbs.closeParaviewVideoFile();

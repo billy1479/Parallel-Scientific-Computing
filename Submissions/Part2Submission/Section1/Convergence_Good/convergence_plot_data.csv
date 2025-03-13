@@ -1,0 +1,14 @@
+TimeStep,RelativeError
+0.0001,1
+0.0002,1
+0.0004,1
+0.0008,1
+0.0016,1
+
+# Reference lines
+TimeStep,FirstOrder,SecondOrder
+0.0001,1,1
+0.0002,2,4
+0.0004,4,16
+0.0008,8,64
+0.0016,16,256

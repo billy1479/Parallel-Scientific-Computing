@@ -1,0 +1,19 @@
+created setup with 125 bodies
+plot initial setup plus every 5 time units
+plot next snapshot,	 time step=0,	 t=0,	 dt=0.737299978733063,	 v_max=0,	 dx_min=0
+Initial energy: -3.95378316757287e+15
+plot next snapshot,	 time step=7,	 t=5.16109985113144,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=14,	 t=10.3221997022629,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=21,	 t=15.4832995533943,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=28,	 t=20.6443994045258,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=34,	 t=25.0681992769241,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=41,	 t=30.2292991280556,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=48,	 t=35.390398979187,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=55,	 t=40.5514988303185,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=62,	 t=45.7125986814499,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=68,	 t=50.1363985538483,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=75,	 t=55.2974984049797,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+plot next snapshot,	 time step=82,	 t=60.4585982561111,	 dt=0.737299978733063,	 v_max=1118866.04725847,	 dx_min=0
+Final energy: 4.16496806485086e+19
+Number of remaining objects: 1
+Position of first remaining object: 42376148.2640688, 31357095.6535824, 41060015.4122793

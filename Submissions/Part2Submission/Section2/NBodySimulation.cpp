@@ -264,3 +264,4 @@ void NBodySimulation::printSummary () {
   std::cout << "Position of first remaining object: "
             << x[0][0] << ", " << x[0][1] << ", " << x[0][2] << std::endl;
 }
+
