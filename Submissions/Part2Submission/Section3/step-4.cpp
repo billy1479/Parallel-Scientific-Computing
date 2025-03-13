@@ -289,52 +289,6 @@ public:
     }
   }
 
-  double calculateTotalEnergy(bool mode) {
-    // Calculate total energy as the sum of kinetic and potential energy
-    double totalEnergy = 0.0;
-    double kineticEnergy = 0.0;
-    double potentialEnergy = 0.0;
-    
-    // Calculate kinetic energy: sum of 0.5 * mass * velocity^2 for each body
-    for (int i = 0; i < NumberOfBodies; i++) {
-      // Calculate velocity magnitude squared (v^2 = vx^2 + vy^2 + vz^2)
-      double velocitySquared = 
-        v[i][0] * v[i][0] + 
-        v[i][1] * v[i][1] + 
-        v[i][2] * v[i][2];
-      
-      // Add kinetic energy contribution from this body
-      kineticEnergy += 0.5 * mass[i] * velocitySquared;
-    }
-    
-    // Calculate potential energy: sum of -G * m_i * m_j / r_ij for each unique pair
-    for (int i = 0; i < NumberOfBodies; i++) {
-      for (int j = i + 1; j < NumberOfBodies; j++) {
-        // Calculate Euclidean distance between bodies i and j
-        double distance = sqrt(
-          (x[j][0] - x[i][0]) * (x[j][0] - x[i][0]) +
-          (x[j][1] - x[i][1]) * (x[j][1] - x[i][1]) +
-          (x[j][2] - x[i][2]) * (x[j][2] - x[i][2])
-        );
-        
-        // Add potential energy contribution from this pair
-        // The negative sign is because gravitational potential energy is negative
-        potentialEnergy -= (mass[i] * mass[j]) / distance;
-      }
-    }
-    
-    // Total energy is the sum of kinetic and potential energy
-    totalEnergy = kineticEnergy + potentialEnergy;
-  
-    if (mode) {
-      std::cout << "Initial energy: " << totalEnergy << std::endl;
-    } else {
-      std::cout << "Final energy: " << totalEnergy << std::endl;
-    }
-  
-    return totalEnergy;
-  }
-
   // Helper function to detect and merge colliding bodies
   void mergeBodies() {
     bool mergeOccurred = false;
@@ -409,6 +363,8 @@ public:
   }
 };
 
+
+
 /**
  * Barnes-Hut simulation for N-body problems
  */
@@ -439,6 +395,52 @@ public:
         
         // Clean up adapter arrays
         cleanupAdapters();
+    }
+
+    double calculateTotalEnergy(bool mode) {
+      // Calculate total energy as the sum of kinetic and potential energy
+      double totalEnergy = 0.0;
+      double kineticEnergy = 0.0;
+      double potentialEnergy = 0.0;
+      
+      // Calculate kinetic energy: sum of 0.5 * mass * velocity^2 for each body
+      for (int i = 0; i < NumberOfBodies; i++) {
+        // Calculate velocity magnitude squared (v^2 = vx^2 + vy^2 + vz^2)
+        double velocitySquared = 
+          bodies[i].vx * bodies[i].vx + 
+          bodies[i].vy * bodies[i].vy + 
+          bodies[i].vz * bodies[i].vz;
+        
+        // Add kinetic energy contribution from this body
+        kineticEnergy += 0.5 * bodies[i].mass * velocitySquared;
+      }
+      
+      // Calculate potential energy: sum of -G * m_i * m_j / r_ij for each unique pair
+      for (int i = 0; i < NumberOfBodies; i++) {
+        for (int j = i + 1; j < NumberOfBodies; j++) {
+          // Calculate Euclidean distance between bodies i and j
+          double distance = sqrt(
+            (bodies[j].x - bodies[i].x) * (bodies[j].x - bodies[i].x) +
+            (bodies[j].y - bodies[i].y) * (bodies[j].y - bodies[i].y) +
+            (bodies[j].z - bodies[i].z) * (bodies[j].z - bodies[i].z)
+          );
+          
+          // Add potential energy contribution from this pair
+          // The negative sign is because gravitational potential energy is negative
+          potentialEnergy -= (bodies[i].mass * bodies[j].mass) / distance;
+        }
+      }
+      
+      // Total energy is the sum of kinetic and potential energy
+      totalEnergy = kineticEnergy + potentialEnergy;
+    
+      if (mode) {
+        std::cout << "Initial energy: " << totalEnergy << std::endl;
+      } else {
+        std::cout << "Final energy: " << totalEnergy << std::endl;
+      }
+    
+      return totalEnergy;
     }
     
     // Override setUp to initialize Barnes-Hut specific parameters
@@ -685,7 +687,7 @@ int main (int argc, char** argv) {
   nbs.takeSnapshot();
 
   nbs.calculateTotalEnergy(true);
-  
+
   while (!nbs.hasReachedEnd()) {
     nbs.updateBody();
     nbs.takeSnapshot();

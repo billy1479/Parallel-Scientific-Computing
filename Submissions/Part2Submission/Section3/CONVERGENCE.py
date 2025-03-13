@@ -33,7 +33,7 @@ class TimeStepEnergyTester:
                         end_dt=1.5,
                         dt_increment=0.0001,
                         final_time=60.0,
-                        executable_name="./step-0",
+                        executable_name="./step-4",
                         output_dir="TimeStepTest",
                         result_file="timestep_results.csv"):
         """
@@ -742,7 +742,7 @@ if __name__ == "__main__":
     parser.add_argument("--end-dt", type=float, default=1.5, help="Ending time step")
     parser.add_argument("--dt-increment", type=float, default=0.0001, help="Time step increment")
     parser.add_argument("--final-time", type=float, default=10.0, help="Final simulation time")
-    parser.add_argument("--executable", default="./step-0", help="Executable name")
+    parser.add_argument("--executable", default="./step-4", help="Executable name")
     parser.add_argument("--output", default="TimeStepTest", help="Output directory")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     

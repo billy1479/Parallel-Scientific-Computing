@@ -107,8 +107,8 @@ public:
     collisionConstant = 0.01 / NumberOfBodies; // 10^(-6)/N
     merged = new bool[NumberOfBodies]();  // Initialize all to false
     
-    std::cout << "Collision simulation setup complete. Collision constant: " 
-              << collisionConstant << std::endl;
+    // std::cout << "Collision simulation setup complete. Collision constant: " 
+              // << collisionConstant << std::endl;
   }
   
   // Update method with direct force calculation and collision detection
@@ -310,9 +310,9 @@ public:
         // Check if they should merge: |x1-x2| ≤ C(m1+m2)
         double mergeThreshold = collisionConstant * (bodies[i].mass + bodies[j].mass);
         if (distance <= mergeThreshold) {
-          std::cout << "Merging bodies: distance=" << distance 
-                    << ", threshold=" << mergeThreshold 
-                    << ", C=" << collisionConstant << std::endl;
+          // std::cout << "Merging bodies: distance=" << distance 
+          //           << ", threshold=" << mergeThreshold 
+          //           << ", C=" << collisionConstant << std::endl;
           mergeOccurred = true;
 
           // Calculate the new position and velocity as the mass-weighted mean
@@ -334,9 +334,9 @@ public:
           // Mark body j as merged
           merged[j] = true;
 
-          std::cout << "Bodies " << i << " and " << j << " merged with new mass "
-                    << bodies[i].mass << " at position ("
-                    << bodies[i].x << ", " << bodies[i].y << ", " << bodies[i].z << ")" << std::endl;
+          // std::cout << "Bodies " << i << " and " << j << " merged with new mass "
+          //           << bodies[i].mass << " at position ("
+          //           << bodies[i].x << ", " << bodies[i].y << ", " << bodies[i].z << ")" << std::endl;
         }
       }
     }
@@ -358,8 +358,8 @@ public:
       int oldNumberOfBodies = NumberOfBodies;
       NumberOfBodies = newIndex;
 
-      std::cout << "After merging, number of bodies reduced from "
-                << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
+      // std::cout << "After merging, number of bodies reduced from "
+      //           << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
 
       // Reset the merged array for future use
       for (int i = 0; i < oldNumberOfBodies; i++) {

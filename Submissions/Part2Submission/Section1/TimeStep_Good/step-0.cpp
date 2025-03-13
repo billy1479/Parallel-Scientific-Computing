@@ -51,29 +51,33 @@ int main(int argc, char** argv) {
   simulation.setUp(argc, argv);
   
   // Find largest stable time step
-  double initialTimeStep = 0.00001;  // Start with a very small time step
-  double maxTimeStep = 1;          // Maximum time step to test
-  double maxTestTime = 60.0;          // Physical time to simulate for stability test
-  double energyThreshold = 0.01;     // Allow 1% energy drift
+  // double initialTimeStep = 0.00001;  // Start with a very small time step
+  // double maxTimeStep = 1;          // Maximum time step to test
+  // double maxTestTime = 60.0;          // Physical time to simulate for stability test
+  // double energyThreshold = 0.01;     // Allow 1% energy drift
   
-  double stableTimeStep = simulation.findLargestStableTimeStep(
-      initialTimeStep, 
-      maxTimeStep, 
-      maxTestTime, 
-      energyThreshold
-  );
+  // double stableTimeStep = simulation.findLargestStableTimeStep(
+  //     initialTimeStep, 
+  //     maxTimeStep, 
+  //     maxTestTime, 
+  //     energyThreshold
+  // );
   
-  // Use the found stable time step
-  simulation.timeStepSize = stableTimeStep;
+  // // Use the found stable time step
+  // simulation.timeStepSize = stableTimeStep;
   
   // Now run with the determined step size
   simulation.openParaviewVideoFile();
   simulation.takeSnapshot();
+
+  simulation.calculateTotalEnergy(true);
   
   while (!simulation.hasReachedEnd()) {
       simulation.updateBody();
       simulation.takeSnapshot();
   }
+
+  simulation.calculateTotalEnergy(false);
   
   simulation.closeParaviewVideoFile();
   simulation.printSummary();

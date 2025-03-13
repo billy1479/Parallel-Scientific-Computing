@@ -107,8 +107,8 @@ public:
     collisionConstant = 0.01 / NumberOfBodies;
     merged = new bool[NumberOfBodies]();  // Initialize all to false
     
-    std::cout << "Collision simulation setup complete. Collision constant: " 
-              << collisionConstant << std::endl;
+    // std::cout << "Collision simulation setup complete. Collision constant: " 
+    //           << collisionConstant << std::endl;
   }
   
   // Update method with direct force calculation and collision detection
@@ -328,9 +328,9 @@ public:
           // Mark body j as merged
           merged[j] = true;
 
-          std::cout << "Bodies " << i << " and " << j << " merged with new mass "
-                    << bodies[i].mass << " at position ("
-                    << bodies[i].x << ", " << bodies[i].y << ", " << bodies[i].z << ")" << std::endl;
+          // std::cout << "Bodies " << i << " and " << j << " merged with new mass "
+          //           << bodies[i].mass << " at position ("
+          //           << bodies[i].x << ", " << bodies[i].y << ", " << bodies[i].z << ")" << std::endl;
         }
       }
     }
@@ -352,8 +352,8 @@ public:
       int oldNumberOfBodies = NumberOfBodies;
       NumberOfBodies = newIndex;
 
-      std::cout << "After merging, number of bodies reduced from "
-                << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
+      // std::cout << "After merging, number of bodies reduced from "
+      //           << oldNumberOfBodies << " to " << NumberOfBodies << std::endl;
 
       // Reset the merged array for future use
       for (int i = 0; i < oldNumberOfBodies; i++) {
@@ -404,7 +404,7 @@ public:
         octree = nullptr;
         domainSize = 0.0;
         
-        std::cout << "Barnes-Hut simulation initialized" << std::endl;
+        // std::cout << "Barnes-Hut simulation initialized" << std::endl;
     }
     
     // Override updateBody to use Barnes-Hut algorithm

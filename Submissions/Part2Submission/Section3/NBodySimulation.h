@@ -1,5 +1,4 @@
-Figure#include <cmath>
-
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <limits>
