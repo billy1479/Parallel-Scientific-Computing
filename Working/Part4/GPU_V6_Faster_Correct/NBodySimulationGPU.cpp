@@ -259,71 +259,57 @@ void NBodySimulationGPU::runSimulation() {
   {
     while (!hasReachedEnd()) {
       timeStepCounter++;
-      maxV = 0.0;
-      minDx = std::numeric_limits<double>::max();
+      
+      // Variables for reduction operations
+      double local_minDx = std::numeric_limits<double>::max();
+      double local_maxV = 0.0;
 
       // Reset forces
       #pragma omp target teams distribute parallel for
       for (int i = 0; i < NumberOfBodies * 3; i++) {
         force_flat[i] = 0.0;
       }
-
-      // Compute forces between all pairs of bodies using shared memory
-      #pragma omp target teams distribute parallel for collapse(2)
+      
+      #pragma omp target teams distribute parallel for reduction(min:local_minDx)
       for (int i = 0; i < NumberOfBodies; i++) {
-        // Declare shared memory for intermediate forces
-        double shared_force[3] = {0.0, 0.0, 0.0}; // Shared memory for thread-local forces
+        // Thread-private arrays for local force accumulation
+        double local_force_x = 0.0;
+        double local_force_y = 0.0;
+        double local_force_z = 0.0;
 
-        for (int j = i + 1; j < NumberOfBodies; j++) {
-          double dx = x_flat[j * 3] - x_flat[i * 3];
-          double dy = x_flat[j * 3 + 1] - x_flat[i * 3 + 1];
-          double dz = x_flat[j * 3 + 2] - x_flat[i * 3 + 2];
+        for (int j = 0; j < NumberOfBodies; j++) {
+          if (i != j) {
+            double dx = x_flat[j * 3] - x_flat[i * 3];
+            double dy = x_flat[j * 3 + 1] - x_flat[i * 3 + 1];
+            double dz = x_flat[j * 3 + 2] - x_flat[i * 3 + 2];
 
-          double distanceSqr = dx * dx + dy * dy + dz * dz;
-          double distance = sqrt(distanceSqr);
-          double distance3 = distance * distance * distance;
+            double distanceSqr = dx * dx + dy * dy + dz * dz;
+            double distance = sqrt(distanceSqr);
+            double distance3 = distance * distance * distance;
 
-          // Update minimum distance
-          // #pragma omp critical
-          // {
-          //   minDx = std::min(minDx, distance);
-          // }
+            // Update minimum distance with reduction
+            local_minDx = std::min(local_minDx, distance);
 
-          double factor = mass[i] * mass[j] / distance3;
+            double factor = mass[i] * mass[j] / distance3;
 
-          // Calculate force components
-          double fx = dx * factor;
-          double fy = dy * factor;
-          double fz = dz * factor;
-
-          // Accumulate forces for body i in shared memory
-          // #pragma omp atomic
-          // shared_force[0] += fx;
-          // #pragma omp atomic
-          // shared_force[1] += fy;
-          // #pragma omp atomic
-          // shared_force[2] += fz;
-
-          // Accumulate forces for body j (symmetric but opposite)
-          #pragma omp atomic
-          force_flat[j * 3] -= fx;
-          #pragma omp atomic
-          force_flat[j * 3 + 1] -= fy;
-          #pragma omp atomic
-          force_flat[j * 3 + 2] -= fz;
+            // Accumulate forces locally
+            local_force_x += dx * factor;
+            local_force_y += dy * factor;
+            local_force_z += dz * factor;
+          }
         }
 
-        // Write back the accumulated forces for body i from shared memory
+        // Write back accumulated forces to global arrays
         #pragma omp atomic
-        force_flat[i * 3] += shared_force[0];
+        force_flat[i * 3] += local_force_x;
         #pragma omp atomic
-        force_flat[i * 3 + 1] += shared_force[1];
+        force_flat[i * 3 + 1] += local_force_y;
         #pragma omp atomic
-        force_flat[i * 3 + 2] += shared_force[2];
+        force_flat[i * 3 + 2] += local_force_z;
       }
 
       // Update positions and velocities
-      #pragma omp target teams distribute parallel for reduction(max:maxV)
+      #pragma omp target teams distribute parallel for reduction(max:local_maxV)
       for (int i = 0; i < NumberOfBodies; i++) {
         x_flat[i * 3] += timeStepSize * v_flat[i * 3];
         x_flat[i * 3 + 1] += timeStepSize * v_flat[i * 3 + 1];
@@ -337,8 +323,13 @@ void NBodySimulationGPU::runSimulation() {
                            v_flat[i * 3 + 1] * v_flat[i * 3 + 1] +
                            v_flat[i * 3 + 2] * v_flat[i * 3 + 2];
 
-        maxV = std::max(maxV, sqrt(v_squared));
+        local_maxV = std::max(local_maxV, sqrt(v_squared));
       }
+
+      // Update CPU metrics with the GPU results
+      #pragma omp target update from(local_minDx, local_maxV)
+      minDx = local_minDx;
+      maxV = local_maxV;
 
       t += timeStepSize;
 
