@@ -28,7 +28,19 @@ Pass...
 
 ### Batch scripts
 
-Show results for each batch script
+Numact output:
+
+available: 2 nodes (0-1)
+node 0 cpus: 0 1 2 3 4 5 6 7 16 17 18 19 20 21 22 23
+node 0 size: 31807 MB
+node 0 free: 12125 MB
+node 1 cpus: 8 9 10 11 12 13 14 15 24 25 26 27 28 29 30 31
+node 1 size: 32251 MB
+node 1 free: 10332 MB
+node distances:
+node   0   1 
+  0:  10  21 
+  1:  21  10
 
 ### PVM
 
