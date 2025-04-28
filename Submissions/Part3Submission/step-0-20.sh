@@ -1,0 +1,1 @@
+./step-0 --input large_sim.nbody

@@ -1,0 +1,25 @@
+/var/spool/slurmd/job754693/slurm_script: line 25: .venv/bin/activate: No such file or directory
+=== GPU-Accelerated N-Body Simulation ===
+Setting up from input file: large_sim.nbody
+Read setup with 8000 bodies from large_sim.nbody
+plot initial setup plus every 0.1 time units
+GPU arrays initialized with 8000 bodies
+plot next snapshot,	 time step=0,	 t=0,	 dt=0.01,	 v_max=0,	 dx_min=0
+Starting simulation...
+plot next snapshot,	 time step=11,	 t=0.11,	 dt=0.01,	 v_max=3367.05518195462,	 dx_min=0.0224451557844143
+plot next snapshot,	 time step=20,	 t=0.2,	 dt=0.01,	 v_max=3367.05233601385,	 dx_min=0.0324730103543603
+plot next snapshot,	 time step=30,	 t=0.3,	 dt=0.01,	 v_max=3367.05144406448,	 dx_min=0.0313146186404196
+plot next snapshot,	 time step=40,	 t=0.4,	 dt=0.01,	 v_max=3367.05104144271,	 dx_min=0.044667162779981
+plot next snapshot,	 time step=50,	 t=0.5,	 dt=0.01,	 v_max=3367.05081216736,	 dx_min=0.066914268785843
+plot next snapshot,	 time step=60,	 t=0.6,	 dt=0.01,	 v_max=3367.05066412162,	 dx_min=0.0887504768901915
+plot next snapshot,	 time step=70,	 t=0.7,	 dt=0.01,	 v_max=3367.05056063432,	 dx_min=0.0435084143006327
+plot next snapshot,	 time step=80,	 t=0.8,	 dt=0.01,	 v_max=3367.05048422042,	 dx_min=0.133676802127237
+plot next snapshot,	 time step=90,	 t=0.900000000000001,	 dt=0.01,	 v_max=3367.05042548492,	 dx_min=0.0715724868269139
+plot next snapshot,	 time step=100,	 t=1,	 dt=0.01,	 v_max=3367.05037892906,	 dx_min=0.14354437713095
+Number of remaining objects: 8000
+Position of first remaining object: 72.1296504606796, 94.3126294655864, 74.439481102875
+Simulation completed successfully.
+
+real	0m1.367s
+user	0m1.089s
+sys	0m0.221s
